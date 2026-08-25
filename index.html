@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Escape the Pyramid — The Time of Khufu</title>
+  <link rel="icon" href="assets/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="crt" aria-hidden="true"></div>
+  <main id="game" class="game-shell">
+    <header class="topbar">
+      <div><strong>ESCAPE THE PYRAMID</strong><span>THE TIME OF KHUFU</span></div>
+      <div class="hud-stats"><span id="roomLabel">START</span><span>⭐ <b id="score">1000</b></span><span>⏱ <b id="timer">00:00</b></span></div>
+    </header>
+
+    <section id="scene" class="scene" aria-live="polite"></section>
+
+    <footer class="inventory-wrap">
+      <div class="inventory-title">INVENTARIS</div>
+      <div id="inventory" class="inventory"></div>
+      <div class="controls">
+        <div id="introNavControls" class="intro-nav-controls" hidden>
+          <button id="introBack" type="button">← TERUG</button>
+          <span id="introProgress" aria-live="polite">1 / 5</span>
+          <button id="introNext" type="button">VOLGENDE →</button>
+        </div>
+        <button id="hintBtn" type="button">HINT (-100)</button>
+        <button id="soundBtn" type="button">FX: AAN</button>
+        <label class="music-volume" for="musicVolume" title="Volume achtergrondmuziek"><span>🎵</span><input id="musicVolume" type="range" min="0" max="100" step="1" value="80" aria-label="Volume achtergrondmuziek"><output id="musicVolumeValue" for="musicVolume">80%</output></label>
+        <button id="debugBtn" type="button">DEBUG</button>
+        <button id="resetBtn" type="button">RESET</button>
+      </div>
+    </footer>
+  </main>
+
+  <dialog id="debugDialog">
+    <form method="dialog" class="dialog-card">
+      <h2>DEBUGMENU</h2>
+      <p>Open een kamer rechtstreeks.</p>
+      <div id="debugRooms" class="debug-grid"></div>
+      <button value="close">SLUITEN</button>
+    </form>
+  </dialog>
+
+  <script src="js/levels.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
