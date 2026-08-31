@@ -1,5 +1,5 @@
 const AudioEngine={
- fxEnabled:true,ctx:null,master:null,musicGain:null,musicTimer:null,fileMusic:null,step:0,currentRoom:null,musicVolume:.8,
+ fxEnabled:true,ctx:null,master:null,musicGain:null,musicTimer:null,fileMusic:null,introFadeFrame:null,step:0,currentRoom:null,musicVolume:.8,
  init(){
   if(this.ctx)return;
   this.ctx=new (window.AudioContext||window.webkitAudioContext)();
@@ -10,7 +10,7 @@ const AudioEngine={
  },
  unlock(){
   this.init();if(this.ctx.state==='suspended')this.ctx.resume();
-  if(this.currentRoom==='intro'&&this.musicVolume>0){this.fileMusic.play().catch(()=>{});return}
+  if(this.currentRoom==='intro'&&this.musicVolume>0){this.playIntro(false);return}
   if(this.currentRoom!==null&&!this.musicTimer&&this.musicVolume>0)this.startMusic(this.currentRoom)
  },
  tone(freq=440,dur=.12,type='square',vol=.035,when=0,destination=null){
@@ -51,6 +51,22 @@ const AudioEngine={
   const tempos=[300,315,290,325,285,305,295,280,300,340];
   return {root:roots[room-1],melody:melodies[room-1],harmony:harmonies[room-1],bass:basses[room-1],tempo:tempos[room-1]};
  },
+ playIntro(restartFade=true){
+  if(!this.fileMusic||this.musicVolume<=0)return;
+  if(!restartFade&&this.introFadeFrame&&!this.fileMusic.paused)return;
+  if(restartFade)this.fileMusic.volume=0;
+  this.fileMusic.play().then(()=>{
+   if(this.introFadeFrame)cancelAnimationFrame(this.introFadeFrame);
+   const started=performance.now(),from=this.fileMusic.volume,duration=4000;
+   const fade=now=>{
+    if(this.currentRoom!=='intro'||this.musicVolume<=0){this.introFadeFrame=null;return}
+    const progress=Math.min(1,(now-started)/duration),target=this.musicVolume*.5;
+    this.fileMusic.volume=Math.min(1,from+(target-from)*progress);
+    if(progress<1)this.introFadeFrame=requestAnimationFrame(fade);else this.introFadeFrame=null;
+   };
+   this.introFadeFrame=requestAnimationFrame(fade);
+  }).catch(()=>{});
+ },
  startMusic(room){
   this.init();
   const previous=this.currentRoom;
@@ -61,10 +77,10 @@ const AudioEngine={
    // Intro en outro gebruiken de door de gebruiker aangeleverde MIDI-compositie,
    // vooraf gerenderd naar WAV omdat browsers MIDI niet betrouwbaar rechtstreeks afspelen.
    if(previous!=='intro')this.fileMusic.currentTime=0;
-   this.fileMusic.volume=this.musicVolume*.5;
-   if(this.musicVolume>0)this.fileMusic.play().catch(()=>{});
+   if(this.musicVolume>0)this.playIntro(previous!=='intro');
    return;
   }
+  if(this.introFadeFrame){cancelAnimationFrame(this.introFadeFrame);this.introFadeFrame=null}
   if(this.fileMusic&&!this.fileMusic.paused){this.fileMusic.pause();this.fileMusic.currentTime=0}
   if(!this.ctx||this.ctx.state!=='running'||this.musicVolume<=0)return;
   const data=this.roomPattern(room),scale=[1,1.122,1.189,1.335,1.498,1.587,1.782,2,2.119];
@@ -78,17 +94,18 @@ const AudioEngine={
   };
   tick();this.musicTimer=setInterval(tick,data.tempo);
  },
- stopMusic(){if(this.musicTimer)clearInterval(this.musicTimer);this.musicTimer=null;if(this.fileMusic){this.fileMusic.pause();this.fileMusic.currentTime=0}this.currentRoom=null},
+ stopMusic(){if(this.musicTimer)clearInterval(this.musicTimer);this.musicTimer=null;if(this.introFadeFrame)cancelAnimationFrame(this.introFadeFrame);this.introFadeFrame=null;if(this.fileMusic){this.fileMusic.pause();this.fileMusic.currentTime=0}this.currentRoom=null},
  setMusicVolume(value){
   this.musicVolume=Math.max(0,Math.min(1,Number(value)||0));this.init();
   this.musicGain.gain.cancelScheduledValues(this.ctx.currentTime);
   this.musicGain.gain.setTargetAtTime(this.musicVolume,this.ctx.currentTime,.035);
-  if(this.fileMusic)this.fileMusic.volume=this.musicVolume*.5;
+  if(this.fileMusic&&this.currentRoom!=='intro')this.fileMusic.volume=this.musicVolume*.5;
   if(this.musicVolume===0){
    if(this.musicTimer){clearInterval(this.musicTimer);this.musicTimer=null}
    if(this.fileMusic&&!this.fileMusic.paused)this.fileMusic.pause();
   }else if(this.currentRoom==='intro'){
-   this.fileMusic.play().catch(()=>{});
+   if(this.fileMusic.paused)this.playIntro(true);
+   else if(!this.introFadeFrame)this.fileMusic.volume=this.musicVolume*.5;
   }else if(this.currentRoom!==null&&!this.musicTimer){
    this.startMusic(this.currentRoom);
   }

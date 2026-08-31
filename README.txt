@@ -1,4 +1,4 @@
-Escape the Pyramid – The Time of Khufu v1.8
+Escape the Pyramid – The Time of Khufu v1.9.2
 
 Starten:
 1. Pak het zipbestand volledig uit.
@@ -11,7 +11,7 @@ Nieuw in v1.8:
 - Kamer 1, 3, 4 en 5 passen hun moeilijkheid aan de gekozen speelstijl aan.
 - Kamer 5 werkt als een echt memoryspel met omdraaiende kaarten.
 - Na het oplossen van een kamer gaat de game na vijf seconden automatisch verder.
-- Een hint kost nu 100 punten.
+- Hints zijn stapsgewijs en houden rekening met de actuele puzzelvoortgang. De eerste hint per kamer is gratis. In Verkennen kosten vervolghints 100 punten; in Uitdaging kosten hint 2 en 3 elk 100 punten en hint 4 en verder 150 punten.
 - De routepuzzel gebruikt alleen een piramide-afbeelding en een heldere route van buiten naar binnen.
 
 De game werkt volledig offline en gebruikt geen frameworks.
@@ -47,3 +47,10 @@ v1.9.0
 v1.9.1
 - In kamer 1 krijgt ieder juist gekozen antwoord in Verkennen direct een groene rand.
 - In Uitdaging blijft kamer 1 ongewijzigd en verschijnt deze groene antwoordmarkering niet.
+
+v1.9.2
+- De intro- en outromuziek start op maximaal 50% en fade rustig in.
+- De memorykaarten in kamer 5 draaien zichtbaar om in Verkennen en Uitdaging.
+- Alle kamers hebben stapsgewijze, voortgangsafhankelijke hints met aangepaste kosten per speelstijl.
+- Kamer 8 gebruikt in de latere sommen ook het Egyptische honderdtalsymbool (opgerold touw).
+- Kamer 9 heeft een duidelijke titel en controleknop, accepteert Nederlandse en Engelse antwoorden en bevat twee extra raadsels in Uitdaging.

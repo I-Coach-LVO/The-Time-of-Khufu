@@ -123,29 +123,34 @@
 .memory-card.flipped .memory-front,.memory-card.matched .memory-front{opacity:0;visibility:hidden}
 .memory-card.flipped .memory-back,.memory-card.matched .memory-back{opacity:1;visibility:visible}
 
-/* v1.8.3: betrouwbare memory-kaarten zonder browsergevoelige 3D-achterkant */
+/* Kamer 5: zichtbare 3D-omdraaiing van de memorykaarten */
 .memory-card{
-  transform:none!important;
-  -webkit-transform:none!important;
-  transform-style:flat!important;
-  -webkit-transform-style:flat!important;
   min-height:92px;
+  transform:rotateY(0deg);
+  -webkit-transform:rotateY(0deg);
+  transform-style:preserve-3d;
+  -webkit-transform-style:preserve-3d;
+  transition:transform .55s cubic-bezier(.2,.7,.2,1),box-shadow .2s;
+  will-change:transform;
 }
 .memory-card .memory-front,
 .memory-card .memory-back{
-  transform:none!important;
-  -webkit-transform:none!important;
-  backface-visibility:visible!important;
-  -webkit-backface-visibility:visible!important;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+  transition:none;
 }
 .memory-card .memory-front{
+  transform:rotateY(0deg);
+  -webkit-transform:rotateY(0deg);
   opacity:1;
   visibility:visible;
   z-index:2;
 }
 .memory-card .memory-back{
-  opacity:0;
-  visibility:hidden;
+  transform:rotateY(180deg);
+  -webkit-transform:rotateY(180deg);
+  opacity:1;
+  visibility:visible;
   z-index:1;
   background:#f0c35e;
   color:#21152a;
@@ -154,16 +159,17 @@
   line-height:1.25;
   overflow-wrap:anywhere;
 }
+.memory-card.flipped,
+.memory-card.matched{
+  transform:rotateY(180deg);
+  -webkit-transform:rotateY(180deg);
+}
 .memory-card.flipped .memory-front,
 .memory-card.matched .memory-front{
-  opacity:0!important;
-  visibility:hidden!important;
   pointer-events:none;
 }
 .memory-card.flipped .memory-back,
 .memory-card.matched .memory-back{
-  opacity:1!important;
-  visibility:visible!important;
   z-index:3;
 }
 .memory-card.matched{

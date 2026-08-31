@@ -1,18 +1,25 @@
 const $=s=>document.querySelector(s);const scene=$('#scene');
-const state={room:0,score:1000,start:null,elapsed:0,timerStarted:false,timerRunning:false,timerStopped:false,inventory:[],solved:[],hints:0,fxEnabled:true,musicVolume:80,mode:null};
+const state={room:0,score:1000,start:null,elapsed:0,timerStarted:false,timerRunning:false,timerStopped:false,inventory:[],solved:[],hints:0,hintUsage:{},hintHistory:{},fxEnabled:true,musicVolume:80,mode:null};
 function elapsedSeconds(){return state.elapsed+(state.timerRunning&&state.start?Math.floor((Date.now()-state.start)/1000):0)}
 function save(){localStorage.setItem('khufuSave',JSON.stringify({...state,elapsed:elapsedSeconds(),start:null,timerRunning:false}))}
 function startTimer(){if(state.timerStarted||state.timerStopped)return;state.timerStarted=true;state.timerRunning=true;state.start=Date.now();state.elapsed=0;save()}
 function stopTimer(){if(!state.timerRunning||state.timerStopped)return;state.elapsed=elapsedSeconds();state.start=null;state.timerRunning=false;state.timerStopped=true;save()}
-function load(){const x=localStorage.getItem('khufuSave');if(x){try{const saved=JSON.parse(x);Object.assign(state,saved);if(typeof saved.elapsed!=='number')state.elapsed=0;if(typeof saved.timerStarted!=='boolean')state.timerStarted=state.room>0;if(typeof saved.timerStopped!=='boolean')state.timerStopped=state.solved?.includes(10)||false;if(state.timerStarted&&!state.timerStopped){state.timerRunning=true;state.start=Date.now()}else{state.timerRunning=false;state.start=null}}catch{}}AudioEngine.fxEnabled=state.fxEnabled!==false;AudioEngine.musicVolume=Math.max(0,Math.min(1,(Number(state.musicVolume)||0)/100));}
+function load(){const x=localStorage.getItem('khufuSave');if(x){try{const saved=JSON.parse(x);Object.assign(state,saved);if(typeof saved.elapsed!=='number')state.elapsed=0;if(typeof saved.timerStarted!=='boolean')state.timerStarted=state.room>0;if(typeof saved.timerStopped!=='boolean')state.timerStopped=state.solved?.includes(10)||false;if(!saved.hintUsage||typeof saved.hintUsage!=='object')state.hintUsage={};if(!saved.hintHistory||typeof saved.hintHistory!=='object')state.hintHistory={};if(state.timerStarted&&!state.timerStopped){state.timerRunning=true;state.start=Date.now()}else{state.timerRunning=false;state.start=null}}catch{}}AudioEngine.fxEnabled=state.fxEnabled!==false;AudioEngine.musicVolume=Math.max(0,Math.min(1,(Number(state.musicVolume)||0)/100));}
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const shuffle=a=>{const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b};
 function bg(url,extra=''){return `<div class="room-bg ${extra}" style="background-image:url('${url}')"></div><div class="dust ${extra}"></div>`}
-function updateHUD(){ $('#score').textContent=Math.max(0,state.score);$('#roomLabel').textContent=state.room?`KAMER ${state.room}/10`:'START';const inv=$('#inventory');inv.innerHTML=state.inventory.length?state.inventory.map(i=>`<div class="item" title="${i.name}">${i.icon}<span>${i.name}</span></div>`).join(''):'<span class="tiny">Nog geen voorwerpen gevonden.</span>';save()}
+function hintCost(room=state.room){const used=Number(state.hintUsage?.[room]||0);if(used===0)return 0;if(state.mode==='challenge')return used<3?100:150;return 100}
+function updateHintButton(){const button=$('#hintBtn');if(!button)return;const cost=hintCost();button.textContent=cost?`HINT (-${cost})`:'HINT (1E GRATIS)';button.disabled=!state.room||!activeHint||state.solved.includes(state.room)}
+function updateHUD(){ $('#score').textContent=Math.max(0,state.score);$('#roomLabel').textContent=state.room?`KAMER ${state.room}/10`:'START';const inv=$('#inventory');inv.innerHTML=state.inventory.length?state.inventory.map(i=>`<div class="item" title="${i.name}">${i.icon}<span>${i.name}</span></div>`).join(''):'<span class="tiny">Nog geen voorwerpen gevonden.</span>';updateHintButton();save()}
 function renderTimer(){const s=elapsedSeconds(),m=String(Math.floor(s/60)).padStart(2,'0'),r=String(s%60).padStart(2,'0');$('#timer').textContent=`${m}:${r}`}
 setInterval(renderTimer,250);
 let sceneRun=0;
 let activeHint=null;
+function setActiveHints(source){activeHint=typeof source==='function'?source:()=>source;updateHintButton()}
+function availableHints(){
+ const source=activeHint?activeHint():[LEVELS[state.room-1]?.hint];
+ return (Array.isArray(source)?source:[source]).filter(Boolean).map((hint,index)=>typeof hint==='string'?{key:`${state.room}:${hint}`,text:hint}:{key:hint.key||`${state.room}:${index}:${hint.text}`,text:hint.text});
+}
 function intro(){
  const run=++sceneRun;AudioEngine.startMusic('intro');state.room=0;updateHUD();
  scene.innerHTML=`<div class="intro-cinematic" aria-label="Introductie">
@@ -81,12 +88,21 @@ function matching(p,L){
  const distractors=['Nijl','Piramide','Farao'];
  const options=shuffle(pairs.map(x=>x[1]).concat(state.mode==='challenge'?distractors:[]));
  p.innerHTML=rows.map(x=>`<div class="match-row"><div class="dropzone glyph">${x[0]}</div><select data-a="${x[1]}"><option value="">Kies betekenis</option>${options.map(y=>`<option>${y}</option>`).join('')}</select></div>`).join('')+`<button id="check">CONTROLEER</button>`;
+ setActiveHints(()=>{
+  const hints=[{key:'matching-method',text:'Kijk eerst naar symbolen die je uit het dagelijks leven herkent.'}];
+  [...p.querySelectorAll('select')].forEach((select,index)=>{if(select.value!==select.dataset.a)hints.push({key:`matching-${select.dataset.a}`,text:`Het symbool ${rows[index][0]} hoort bij “${select.dataset.a}”.`})});
+  return hints;
+ });
  if(state.mode==='explore')p.querySelectorAll('.match-row select').forEach(select=>select.addEventListener('change',()=>select.closest('.match-row').classList.toggle('correct',select.value===select.dataset.a)));
  $('#check').addEventListener('click',()=>[...p.querySelectorAll('select')].every(s=>s.value===s.dataset.a)?solve(L):fail('Nog niet alle tekens zijn juist gekoppeld.'))
 }
 function timeline(p,L){
  const good=['Oude Rijk','Middenrijk','Nieuwe Rijk','Rijk van Cleopatra'];
  p.innerHTML=`<div class="timeline-list" aria-label="Sorteerbare tijdlijn">${shuffle(good).map(x=>sortableRow(x)).join('')}</div><button id="check">CONTROLEER</button>`;
+ setActiveHints(()=>{
+  const current=readOrder(p).split('|');
+  return [{key:'timeline-method',text:'Werk van het oudste rijk bovenaan naar de tijd van Cleopatra onderaan.'},...good.flatMap((period,index)=>current[index]===period?[]:[{key:`timeline-${period}`,text:`Op plaats ${index+1} hoort “${period}”.`}])];
+ });
  enableDragSort(p.querySelector('.timeline-list'));
  $('#check').addEventListener('click',()=>readOrder(p)===good.join('|')?solve(L):fail('De tijdlijn klopt nog niet. Sleep de perioden van het Oude Rijk naar het rijk van Cleopatra.'))
 }
@@ -94,12 +110,18 @@ function quiz(p,L){
  const base=[['Wie bestuurde Egypte?','Farao'],['Wie voerde religieuze rituelen uit?','Priester'],['Wie hield administratie bij?','Schrijver'],['Wie had de minste vrijheid?','Slaaf']];
  const extra=[['Wie gaf opdracht om grote monumenten en piramides te bouwen?','Farao'],['Wie verzorgde offers en ceremonies in de tempel?','Priester'],['Wie noteerde belastingen, graanvoorraden en bevelen?','Schrijver'],['Wie verrichtte vaak zwaar lichamelijk werk zonder zelf over zijn leven te beslissen?','Slaaf']];
  const qs=shuffle(state.mode==='challenge'?base.concat(extra):base);let i=0;
- const show=()=>{const [question,answer]=qs[i],answers=shuffle(['Farao','Priester','Schrijver','Slaaf']);p.innerHTML=`<p class="progress">Vraag ${i+1} van ${qs.length}</p><h2>${question}</h2><div class="choices">${answers.map(a=>`<button class="choice">${a}</button>`).join('')}</div>`;p.querySelectorAll('.choice').forEach(b=>b.addEventListener('click',()=>{if(b.textContent===answer){clearFeedback();i++;i===qs.length?solve(L):show()}else fail('Dat is niet de juiste rol.')}))};show()
+ const roleClues={Farao:'Deze persoon stond aan de top en bestuurde het rijk.',Priester:'Deze persoon werkte in de tempel en verzorgde rituelen.',Schrijver:'Deze persoon kon lezen en schrijven en hield gegevens bij.',Slaaf:'Deze persoon had de minste vrijheid en deed vaak zwaar werk.'};
+ const show=()=>{const [question,answer]=qs[i],answers=shuffle(['Farao','Priester','Schrijver','Slaaf']),hintKey=`quiz-${question}`;setActiveHints(()=>[{key:`${hintKey}-method`,text:'Let op het werkwoord in de vraag: besturen, rituelen uitvoeren, schrijven of zwaar werk doen.'},{key:`${hintKey}-clue`,text:roleClues[answer]},{key:`${hintKey}-answer`,text:`Bij deze vraag is “${answer}” het juiste beroep.`}]);p.innerHTML=`<p class="progress">Vraag ${i+1} van ${qs.length}</p><h2>${question}</h2><div class="choices">${answers.map(a=>`<button class="choice">${a}</button>`).join('')}</div>`;p.querySelectorAll('.choice').forEach(b=>b.addEventListener('click',()=>{if(b.textContent===answer){clearFeedback();i++;i===qs.length?solve(L):show()}else fail('Dat is niet de juiste rol.')}))};show()
 }
 function pyramid(p,L){
  const good=state.mode==='challenge'?['ingang','afdalende gang','stijgende gang','Grote Galerij','Koningskamer']:['ingang','gang','Grote Galerij','grafkamer'];
  const options=shuffle(good);
  p.innerHTML=`<div class="pyramid-route-layout"><img class="pyramid-route-image" src="assets/images/pyramid-route.png" alt="Piramide van buitenaf"><div class="pyramid-slots">${good.map((a,i)=>`<label><b>${i+1}</b><select data-a="${a}"><option value="">Kies onderdeel</option>${options.map(x=>`<option>${x}</option>`).join('')}</select></label>`).join('')}<button id="check">CONTROLEER</button></div></div>`;
+ setActiveHints(()=>{
+  const hints=[{key:'pyramid-method',text:'Volg de route op de afbeelding van buiten naar steeds dieper in de piramide.'}];
+  [...p.querySelectorAll('select')].forEach((select,index)=>{if(select.value!==select.dataset.a)hints.push({key:`pyramid-${select.dataset.a}`,text:`Bij stap ${index+1} hoort “${select.dataset.a}”.`})});
+  return hints;
+ });
  $('#check').addEventListener('click',()=>[...p.querySelectorAll('select')].every(x=>x.value===x.dataset.a)?solve(L):fail('Volg de route vanaf de ingang steeds verder naar binnen.'))
 }
 function memory(p,L){
@@ -116,6 +138,10 @@ function memory(p,L){
  p.innerHTML=`<div class="memory-grid ${challenge?'memory-grid-challenge':''}">${cards.map((c,i)=>`<button class="memory-card" data-i="${i}" type="button" aria-label="Gesloten memorykaart"><span class="memory-front" aria-hidden="true"><span class="memory-scarab">𓆣</span></span><span class="memory-back">${c.value}</span></button>`).join('')}</div>`;
  const needed=fields.length;
  const buttons=[...p.querySelectorAll('.memory-card')];
+ setActiveHints(()=>{
+  const remaining=gods.filter(g=>cards.some((card,index)=>card.pair===g.id&&!done.has(index)));
+  return [{key:'memory-method',text:'Onthoud waar namen, betekenissen en afbeeldingen liggen. Kaarten van dezelfde god horen bij elkaar.'},...remaining.map(g=>({key:`memory-${g.id}`,text:challenge?`${g.name} hoort bij “${g.meaning}” en “${g.look}”.`:`${g.name} hoort bij “${g.meaning}”.`}))];
+ });
  buttons.forEach(b=>b.addEventListener('click',()=>{
   const i=Number(b.dataset.i);
   if(locked||open.includes(i)||done.has(i))return;
@@ -143,6 +169,10 @@ function memory(p,L){
 function sequence(p,L){
  const good=['Organen verwijderen','Lichaam drogen met natron','Lichaam verzorgen','In linnen wikkelen','In sarcofaag leggen'];
  p.innerHTML=`<div class="timeline-list" aria-label="Sorteerbare volgorde">${shuffle(good).map(x=>sortableRow(x)).join('')}</div><button id="check">CONTROLEER</button>`;
+ setActiveHints(()=>{
+  const current=readOrder(p).split('|');
+  return [{key:'sequence-method',text:'Denk aan de volgorde: eerst het lichaam voorbereiden, daarna bewaren en als laatste begraven.'},...good.flatMap((step,index)=>current[index]===step?[]:[{key:`sequence-${step}`,text:`Op plaats ${index+1} hoort “${step}”.`}])];
+ });
  enableDragSort(p.querySelector('.timeline-list'));
  $('#check').addEventListener('click',()=>readOrder(p)===good.join('|')?solve(L):fail('De mummificatie verloopt nog niet in de juiste volgorde.'))
 }
@@ -168,34 +198,42 @@ function differences(p,L){
  ];
  const spots=state.mode==='challenge'?challengeSpots:exploreSpots;
  const total=spots.length;
- let found=0;
+ let found=0;const foundIndices=new Set();
  const left='assets/images/Zoek-de-verschillen020.jpg';
  const right=state.mode==='challenge'?'assets/images/Zoek-de-verschillen022.jpg':'assets/images/Zoek-de-verschillen021.jpg';
  const picture=(src,side)=>`<div class="difference-image-wrap"><img src="${src}" alt="Schattenkamer afbeelding ${side}">${spots.map((s,i)=>`<button class="difference-hotspot" data-i="${i}" style="left:${s.x}%;top:${s.y}%;width:${s.r*2}%" aria-label="Mogelijk verschil bij ${s.label}"><span aria-hidden="true">✦</span></button>`).join('')}</div>`;
  p.innerHTML=`<div class="difference-stage real-images">${picture(left,'links')}${picture(right,'rechts')}</div><p>Gevonden: <b id="found">0</b>/${total}</p>`;
+ setActiveHints(()=>{
+  const remaining=spots.map((spot,index)=>({spot,index})).filter(({index})=>!foundIndices.has(String(index)));
+  return [{key:'differences-method',text:'Vergelijk telkens hetzelfde kleine gebied links en rechts, in plaats van de hele afbeeldingen tegelijk.'},...remaining.flatMap(({spot,index})=>[
+   {key:`difference-${index}-area`,text:`Zoek het volgende verschil rond ${spot.y<35?'de bovenkant':spot.y>75?'de onderkant':'het midden'} van de afbeeldingen.`},
+   {key:`difference-${index}-exact`,text:`Bekijk specifiek: ${spot.label}.`}
+  ])];
+ });
  p.querySelectorAll('.difference-hotspot').forEach(h=>h.addEventListener('click',()=>{
   const i=h.dataset.i;
   if(p.querySelector(`.difference-hotspot[data-i="${i}"].found`))return;
   p.querySelectorAll(`.difference-hotspot[data-i="${i}"]`).forEach(x=>x.classList.add('found'));
-  found++;$('#found').textContent=found;AudioEngine.click();if(found===total)solve(L)
+  foundIndices.add(i);found++;$('#found').textContent=found;AudioEngine.click();if(found===total)solve(L)
  }))
 }
 
-function egyptian(n){return '𓎆'.repeat(Math.floor(n/10))+'𓏺'.repeat(n%10)}
+function egyptian(n){const hundreds=Math.floor(n/100),remainder=n%100;return '𓍢'.repeat(hundreds)+'𓎆'.repeat(Math.floor(remainder/10))+'𓏺'.repeat(remainder%10)}
 function numbers(p,L){
  const add=()=>{let a=11+Math.floor(Math.random()*19),b=11+Math.floor(Math.random()*19);if(a+b>59)b=59-a;return {a,b,op:'+',total:a+b}};
  const subtract=()=>{const b=4+Math.floor(Math.random()*20),a=b+4+Math.floor(Math.random()*25);return {a,b,op:'−',total:a-b}};
  const multiply=()=>{const a=2+Math.floor(Math.random()*8),b=2+Math.floor(Math.random()*8);return {a,b,op:'×',total:a*b}};
  const divide=()=>{const b=2+Math.floor(Math.random()*8),total=2+Math.floor(Math.random()*8);return {a:b*total,b,op:'÷',total}};
+ const hundredAdd=()=>{const a=110+Math.floor(Math.random()*20),b=11+Math.floor(Math.random()*19);return {a,b,op:'+',total:a+b}};
+ const hundredSubtract=()=>{const b=11+Math.floor(Math.random()*19),total=100+Math.floor(Math.random()*30);return {a:total+b,b,op:'−',total}};
+ const hundredDivide=()=>{const b=4,total=25+Math.floor(Math.random()*10);return {a:b*total,b,op:'÷',total}};
  let sums;
  if(state.mode==='challenge'){
-  const makers=shuffle([add,subtract,multiply,divide]);
-  sums=makers.map(fn=>fn());
-  sums.push(shuffle([add,subtract,multiply,divide])[0]());
-  sums=shuffle(sums);
- }else sums=[add(),add(),add()];
+  const openingMakers=shuffle([multiply,shuffle([add,subtract,divide])[0]]);
+  sums=[...openingMakers.map(fn=>fn()),hundredAdd(),hundredSubtract(),hundredDivide()];
+ }else sums=[add(),add(),hundredAdd()];
  let current=0;
- const show=()=>{const q=sums[current];activeHint=q.op==='+'?'Tel eerst de tientallen en daarna de eenheden.':q.op==='−'?'Trek eerst de eenheden af en daarna de tientallen.':q.op==='×'?'Denk aan herhaald optellen: hoeveel groepjes van hetzelfde getal?':'Zoek hoeveel keer het tweede getal in het eerste past.';p.innerHTML=`<p class="progress">Rekensom ${current+1} van ${sums.length}</p><div class="number-legend">𓎆 = 10 &nbsp;&nbsp; 𓏺 = 1</div><div class="number-board"><span>${egyptian(q.a)}</span><b> ${q.op} </b><span>${egyptian(q.b)}</span><b> = ?</b></div><label class="answer-label" for="answer">Jouw antwoord</label><input id="answer" inputmode="numeric" autocomplete="off" placeholder="typ het getal"><button id="check">CONTROLEER</button>`;
+ const show=()=>{const q=sums[current],hintKey=`numbers-${q.a}-${q.op}-${q.b}`,usesHundreds=q.a>=100||q.b>=100;const method=q.op==='+'?'Tel eerst de honderdtallen, dan de tientallen en daarna de eenheden.':q.op==='−'?'Trek eerst de eenheden af, daarna de tientallen en controleer het honderdtal.':q.op==='×'?'Denk aan herhaald optellen: hoeveel groepjes van hetzelfde getal?':'Zoek hoeveel keer het tweede getal in het eerste past.';const symbolHint=usesHundreds?'Het opgerolde touw 𓍢 is 100, een boog 𓎆 is 10 en een streep 𓏺 is 1. Zet de tekenreeksen eerst om in gewone getallen.':'Een boog 𓎆 is 10 en een streep 𓏺 is 1. Zet beide tekenreeksen eerst om in gewone getallen.';setActiveHints(()=>[{key:`${hintKey}-symbols`,text:symbolHint},{key:`${hintKey}-method`,text:method},{key:`${hintKey}-values`,text:`De Egyptische getallen zijn ${q.a} en ${q.b}.`},{key:`${hintKey}-answer`,text:`${q.a} ${q.op} ${q.b} = ${q.total}.`}]);p.innerHTML=`<p class="progress">Rekensom ${current+1} van ${sums.length}</p><div class="number-legend">${usesHundreds?'𓍢 = 100 &nbsp;&nbsp; ':''}𓎆 = 10 &nbsp;&nbsp; 𓏺 = 1</div><div class="number-board"><span>${egyptian(q.a)}</span><b> ${q.op} </b><span>${egyptian(q.b)}</span><b> = ?</b></div><label class="answer-label" for="answer">Jouw antwoord</label><input id="answer" inputmode="numeric" autocomplete="off" placeholder="typ het getal"><button id="check">CONTROLEER</button>`;
  $('#check').addEventListener('click',()=>{if(+$('#answer').value===q.total){clearFeedback();current++;current===sums.length?solve(L):(AudioEngine.ok(),show())}else fail('Bekijk de Egyptische getallen opnieuw en let goed op het rekenteken.')});
  $('#answer').addEventListener('keydown',e=>{if(e.key==='Enter')$('#check').click()});
  };
@@ -203,13 +241,20 @@ function numbers(p,L){
 }
 
 function riddle(p,L){
- const riddles=[
-  {text:'Ik bewaak de doden maar leef niet.<br>Ik kijk al duizenden jaren naar het oosten.',answers:['sfinx'],hint:'Denk aan het enorme beeld bij de piramides met een leeuwenlichaam en mensenhoofd.'},
-  {text:'Ik ben gebouwd om een ziel naar de sterren te sturen.<br>Hoe hoger ik reik, hoe dichter ik bij de zon eindig.',answers:['piramide','pyramide'],hint:'Het is een groot driehoekig grafmonument van steen.'},
-  {text:'Ik houd je organen veilig, maar niet je hart.<br>Vier kruiken bewaken wat ooit in jou leefde.',answers:['canope','canopen','canopische kruik','canopische kruiken'],hint:'Tijdens de mummificatie werden organen bewaard in vier speciale kruiken.'},
-  {text:'Ik ben in linnen gewikkeld en wacht op het hiernamaals.<br>Mijn naam fluistert men met angst en ontzag.',answers:['mummie'],hint:'Het lichaam is geconserveerd en volledig in linnen doeken gewikkeld.'}
- ];let i=0;
- const show=()=>{const r=riddles[i];activeHint=r.hint;p.innerHTML=`<p class="progress">Raadsel ${i+1} van 4</p><blockquote class="speech">${r.text}</blockquote><input id="answer" autocomplete="off" placeholder="jouw antwoord"><button id="check">SPREEK JE ANTWOORD UIT</button>`;$('#check').addEventListener('click',()=>{const value=$('#answer').value.trim().toLowerCase();if(r.answers.includes(value)){clearFeedback();i++;i===riddles.length?solve(L):(AudioEngine.ok(),show())}else fail('De oude stem zwijgt. Dat is niet het juiste antwoord.')});$('#answer').addEventListener('keydown',e=>{if(e.key==='Enter')$('#check').click()})};show()
+ const baseRiddles=[
+  {text:'Ik bewaak de doden maar leef niet.<br>Ik kijk al duizenden jaren naar het oosten.',answers:['sfinx','de sfinx','sphinx','the sphinx'],subtle:'Zoek een beroemde bewaker bij de piramides.',hint:'Denk aan het enorme beeld bij de piramides met een leeuwenlichaam en mensenhoofd.'},
+  {text:'Ik ben gebouwd om een ziel naar de sterren te sturen.<br>Hoe hoger ik reik, hoe dichter ik bij de zon eindig.',answers:['piramide','een piramide','pyramide','pyramid','a pyramid'],subtle:'Het antwoord is een stenen grafmonument.',hint:'Het is een groot driehoekig grafmonument van steen.'},
+  {text:'Ik houd je organen veilig, maar niet je hart.<br>Vier kruiken bewaken wat ooit in jou leefde.',answers:['canope','canopen','canopische kruik','canopische kruiken','canopic jar','canopic jars'],subtle:'Denk terug aan de stappen van mummificatie.',hint:'Tijdens de mummificatie werden organen bewaard in vier speciale kruiken.'},
+  {text:'Ik ben in linnen gewikkeld en wacht op het hiernamaals.<br>Mijn naam fluistert men met angst en ontzag.',answers:['mummie','een mummie','mummy','a mummy'],subtle:'Het gaat om een bewaard lichaam.',hint:'Het lichaam is geconserveerd en volledig in linnen doeken gewikkeld.'}
+ ];
+ const challengeRiddles=[
+  {text:'Ik kronkel door het land, maar ben geen slang.<br>Zonder mij zou bijna niemand hier kunnen leven.<br>Wat ben ik?',answers:['nijl','de nijl','nile','the nile'],subtle:'Denk aan water en vruchtbare grond in Egypte.',hint:'Deze grote rivier stroomt door Egypte en maakte landbouw mogelijk.'},
+  {text:'Ik ben een koning, maar draag geen kroon zoals jij die kent.<br>Mijn woord was wet en soms noemden mensen mij zelfs goddelijk.<br>Wie ben ik?',answers:['farao','een farao','pharaoh','a pharaoh'],subtle:'Denk aan de hoogste heerser van het Oude Egypte.',hint:'Deze Egyptische koning bestuurde het rijk en werd als goddelijk gezien.'}
+ ];
+ const riddles=state.mode==='challenge'?baseRiddles.concat(challengeRiddles):baseRiddles;
+ const normalizeAnswer=value=>value.trim().toLocaleLowerCase('nl-NL').replace(/[.!?]+$/,'').trim();
+ let i=0;
+ const show=()=>{const r=riddles[i];setActiveHints(()=>[{key:`riddle-${i}-subtle`,text:r.subtle},{key:`riddle-${i}-concrete`,text:r.hint},{key:`riddle-${i}-answer`,text:`Het antwoord is “${r.answers[0]}”.`}]);p.innerHTML=`<p class="progress">Raadsel ${i+1} van ${riddles.length}</p><blockquote class="speech">${r.text}</blockquote><input id="answer" autocomplete="off" placeholder="jouw antwoord"><button id="check">CONTROLEER</button>`;$('#check').addEventListener('click',()=>{const value=normalizeAnswer($('#answer').value);if(r.answers.includes(value)){clearFeedback();i++;i===riddles.length?solve(L):(AudioEngine.ok(),show())}else fail('De oude stem zwijgt. Dat is niet het juiste antwoord.')});$('#answer').addEventListener('keydown',e=>{if(e.key==='Enter')$('#check').click()})};show()
 }
 
 function finalPuzzle(p,L){
@@ -219,8 +264,14 @@ function finalPuzzle(p,L){
  const historicalSet=new Set(historical);
  const wrongMessage='Er gebeurt niets, je hebt niet alle historische voorwerpen in de kist gelegd of je hebt ook moderne voorwerpen erin gelegd. Leg alleen de voorwerpen in de kist die duidelijk bij de geschiedenis van Egypte horen en dan pas kun je ontsnappen.';
  const renderSelection=()=>{
-  activeHint='Kijk naar voorwerpen die een duidelijke religieuze, symbolische of mummificatiebetekenis hadden in het Oude Egypte.';
   p.innerHTML=`<p>Selecteer de vier historische Egyptische voorwerpen en leg alleen die in de kist.</p><div class="final-chest" aria-label="Kist voor Egyptische voorwerpen"><div class="chest-lid">DE KIST VAN DE FARAO</div><div class="artifact-grid">${shuffle(all).map(x=>`<button class="artifact-choice" type="button" data-name="${x.name}"><span>${x.icon}</span><small>${x.name}</small></button>`).join('')}</div></div><button id="check">SLUIT DE KIST</button>`;
+  setActiveHints(()=>{
+   const selected=new Set([...p.querySelectorAll('.artifact-choice.selected')].map(x=>x.dataset.name));
+   const hints=[{key:'final-method',text:'Kies alleen voorwerpen met een duidelijke religieuze, symbolische of mummificatiebetekenis in het Oude Egypte.'}];
+   [...selected].filter(name=>!historicalSet.has(name)).forEach(name=>hints.push({key:`final-remove-${name}`,text:`“${name}” hoort niet in de historische selectie; haal dit voorwerp uit de kist.`}));
+   historical.filter(name=>!selected.has(name)).forEach(name=>hints.push({key:`final-add-${name}`,text:`“${name}” is historisch Egyptisch en hoort wel in de kist.`}));
+   return hints;
+  });
   p.querySelectorAll('.artifact-choice').forEach(b=>b.addEventListener('click',()=>{b.classList.toggle('selected');clearFeedback();AudioEngine.click()}));
   $('#check').addEventListener('click',()=>{
    const selected=new Set([...p.querySelectorAll('.artifact-choice.selected')].map(x=>x.dataset.name));
@@ -240,7 +291,7 @@ function finalPuzzle(p,L){
  let questionIndex=0;
  const renderMeaningQuiz=()=>{
   const q=questions[questionIndex];
-  activeHint=q.hint;
+  setActiveHints(()=>[{key:`final-meaning-${q.item}-subtle`,text:`Denk terug aan de kamer waarin je de ${q.item} vond.`},{key:`final-meaning-${q.item}-concrete`,text:q.hint},{key:`final-meaning-${q.item}-answer`,text:`De juiste betekenis is: “${q.correct}”.`}]);
   p.innerHTML=`<p class="progress">Betekenisvraag ${questionIndex+1} van ${questions.length}</p><h2>Waarvoor diende de <strong>${q.item}</strong>?</h2><div class="choices">${shuffle(answerPool).map(answer=>`<button class="choice" type="button" data-answer="${answer}">${answer}</button>`).join('')}</div>`;
   p.querySelectorAll('.choice').forEach(button=>button.addEventListener('click',()=>{
    if(button.dataset.answer===q.correct){
@@ -281,8 +332,17 @@ async function ending(){
  $('#skipOutro').addEventListener('click',()=>{if(run!==sceneRun)return;sceneRun++;const old=sceneRun;sceneRun=run;showScore();sceneRun=old});
  for(const frame of scene.querySelectorAll('.outro-frame')){await wait(80);if(run!==sceneRun)return;frame.classList.add('is-visible');await wait(7000);if(run!==sceneRun)return;frame.classList.remove('is-visible');await wait(2000);if(run!==sceneRun)return}showScore();
 }
-function resetGame(){sceneRun++;localStorage.removeItem('khufuSave');Object.assign(state,{room:0,score:1000,start:null,elapsed:0,timerStarted:false,timerRunning:false,timerStopped:false,inventory:[],solved:[],hints:0,fxEnabled:AudioEngine.fxEnabled,musicVolume:Math.round(AudioEngine.musicVolume*100),mode:null});renderTimer();syncAudioControls();intro()}
-$('#hintBtn').addEventListener('click',()=>{if(!state.room)return;state.score-=100;state.hints++;feedback(`<strong>Hint:</strong> ${activeHint||LEVELS[state.room-1].hint}`,true);updateHUD()});
+function resetGame(){sceneRun++;localStorage.removeItem('khufuSave');Object.assign(state,{room:0,score:1000,start:null,elapsed:0,timerStarted:false,timerRunning:false,timerStopped:false,inventory:[],solved:[],hints:0,hintUsage:{},hintHistory:{},fxEnabled:AudioEngine.fxEnabled,musicVolume:Math.round(AudioEngine.musicVolume*100),mode:null});renderTimer();syncAudioControls();intro()}
+$('#hintBtn').addEventListener('click',()=>{
+ if(!state.room||state.solved.includes(state.room))return;
+ const room=state.room,candidates=availableHints(),history=state.hintHistory[room]||[];
+ const next=candidates.find(hint=>!history.includes(hint.key));
+ if(!next){const latest=candidates[candidates.length-1];feedback(latest?`<strong>Hint (opnieuw):</strong> ${latest.text}`:'Er is op dit moment geen nieuwe hint nodig.',true);return}
+ const cost=hintCost(room);
+ state.score-=cost;state.hints++;state.hintUsage[room]=Number(state.hintUsage[room]||0)+1;
+ state.hintHistory[room]=[...history,next.key];
+ feedback(`<strong>${cost?`Hint (-${cost} punten)`:'Gratis hint'}:</strong> ${next.text}`,true);updateHUD();
+});
 function syncAudioControls(){const slider=$('#musicVolume'),out=$('#musicVolumeValue'),fx=$('#soundBtn');slider.value=state.musicVolume;out.value=`${state.musicVolume}%`;out.textContent=`${state.musicVolume}%`;fx.textContent=`FX: ${state.fxEnabled?'AAN':'UIT'}`;AudioEngine.fxEnabled=state.fxEnabled;AudioEngine.setMusicVolume(state.musicVolume/100)}
 $('#soundBtn').addEventListener('click',e=>{state.fxEnabled=AudioEngine.toggleFX();e.target.textContent=`FX: ${state.fxEnabled?'AAN':'UIT'}`;save()});
 $('#musicVolume').addEventListener('input',e=>{state.musicVolume=Number(e.target.value);AudioEngine.setMusicVolume(state.musicVolume/100);$('#musicVolumeValue').value=`${state.musicVolume}%`;$('#musicVolumeValue').textContent=`${state.musicVolume}%`;save()});
