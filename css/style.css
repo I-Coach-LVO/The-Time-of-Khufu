@@ -21,6 +21,7 @@
 .match-row{align-items:stretch}
 .dropzone.glyph{font-size:clamp(2.5rem,7vw,5rem);line-height:1;display:grid;place-items:center;min-height:92px}
 .match-row select,.pyramid-slots select{width:100%;min-height:52px;padding:8px;font:inherit;background:#fff3c4;color:#21152a;border:3px solid #2b1733;font-weight:bold}
+.match-row.correct select{outline:4px solid var(--ok);outline-offset:-4px}
 
 /* Kamer 4 */
 .pyramid-instructions{margin:12px 0 18px;padding:12px;border-left:6px solid var(--gold);background:#0008;line-height:1.55;text-align:center}
@@ -61,8 +62,14 @@
 @media(max-width:900px){.inventory-wrap{grid-template-columns:1fr;grid-template-areas:"title" "inventory" "controls"}.controls{justify-content:flex-start;margin-top:8px}.music-volume{flex:1;grid-template-columns:auto minmax(100px,1fr) 42px}}
 
 /* Story-accurate gameplay refinements */
-.draggable{display:flex;align-items:center;gap:12px;user-select:none;touch-action:none}
+.draggable{display:flex;align-items:center;gap:12px;user-select:none;touch-action:none;min-height:58px}
 .draggable .drag-handle{font-size:1.35rem;cursor:grab}.draggable.dragging{opacity:.45;outline:4px dashed var(--gold)}
+.drag-label{flex:1;min-width:0}
+.move-controls{display:flex;align-items:center;gap:3px;margin-left:auto}
+.move-button{display:grid;place-items:center;width:46px;height:42px;padding:0;border:0;background:transparent;color:#09060d;font-family:Arial,sans-serif;font-size:2.35rem;font-weight:900;line-height:1;box-shadow:none;text-shadow:1px 0 #09060d,-1px 0 #09060d,0 1px #09060d,0 -1px #09060d}
+.move-button:hover:not(:disabled){transform:translateY(-2px);filter:none;background:#d9b65f}
+.move-button:focus-visible{outline:4px solid #6a2f7c;outline-offset:1px}
+.move-button:disabled{opacity:.22;background:transparent}
 .number-legend{display:inline-block;padding:8px 12px;border:3px solid var(--gold);background:#100817;color:var(--cream);font-size:1.25rem;margin-bottom:12px}
 .number-board{display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap;min-height:150px;padding:20px;border:4px solid #5a3a65;background:#07040bcc;font-size:clamp(2rem,5vw,4rem);line-height:1.35;letter-spacing:.18em;text-align:center}
 .number-board span{padding:10px 14px;border:2px solid #8d6aa0;background:#1a1022;max-width:100%;word-break:break-word}
@@ -88,6 +95,7 @@
 .memory-card.flipped,.memory-card.matched{transform:rotateY(180deg)}.memory-card.matched{outline:4px solid var(--ok);cursor:default}
 .memory-grid-challenge{grid-template-columns:repeat(4,1fr)}
 @media(max-width:720px){.mode-options,.pyramid-route-layout{grid-template-columns:1fr}.mode-choice{min-height:220px;grid-template-rows:125px auto auto}.memory-grid-challenge{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:520px){.draggable{gap:7px;padding:8px}.move-button{width:40px;height:40px;font-size:2rem}.draggable .drag-handle{display:none}}
 
 /* v1.8.1: Khufu-uitleg, memory-achterkant en subtiele verschillen */
 .khufu-info-screen{min-height:620px;display:grid;place-items:center;padding:28px;background:radial-gradient(circle at 50% 35%,#3a2417,#07040b 75%)}
@@ -165,63 +173,6 @@
 .memory-card.matched:disabled{
   opacity:1;
   cursor:default;
-}
-
-/* v1.9.0: juiste verken-keuzes en een tastbare 3D-kaartdraai */
-select.match-correct{
-  border:2px solid #35d66f!important;
-  outline:1px solid #35d66f;
-  outline-offset:1px;
-  box-shadow:0 0 0 1px rgba(53,214,111,.25);
-}
-.memory-grid{
-  perspective:1100px;
-}
-.memory-card{
-  padding:0;
-  overflow:visible;
-  background:transparent;
-}
-.memory-card-inner{
-  position:absolute;
-  inset:0;
-  display:block;
-  transform-style:preserve-3d;
-  -webkit-transform-style:preserve-3d;
-  transition:transform .55s cubic-bezier(.2,.72,.22,1);
-  will-change:transform;
-}
-.memory-card .memory-front,
-.memory-card .memory-back{
-  transform:none!important;
-  -webkit-transform:none!important;
-  opacity:1!important;
-  visibility:visible!important;
-  backface-visibility:hidden!important;
-  -webkit-backface-visibility:hidden!important;
-}
-.memory-card .memory-front{
-  transform:rotateY(0deg)!important;
-  -webkit-transform:rotateY(0deg)!important;
-}
-.memory-card .memory-back{
-  transform:rotateY(180deg)!important;
-  -webkit-transform:rotateY(180deg)!important;
-}
-.memory-card.flipped .memory-card-inner,
-.memory-card.matched .memory-card-inner{
-  transform:rotateY(180deg);
-  -webkit-transform:rotateY(180deg);
-}
-.memory-card.flipped .memory-front,
-.memory-card.matched .memory-front,
-.memory-card.flipped .memory-back,
-.memory-card.matched .memory-back{
-  opacity:1!important;
-  visibility:visible!important;
-}
-@media (prefers-reduced-motion:reduce){
-  .memory-card-inner{transition-duration:.01ms}
 }
 
 /* v1.8.8: intro-navigatie in de onderste bedieningsbalk */

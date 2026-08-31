@@ -63,7 +63,7 @@ async function openRoom(n){
  scene.insertAdjacentHTML('beforeend',`<div class="content game-layer"><section class="panel"><h1>Kamer ${L.id}: ${L.title}</h1><p>${roomIntro(L)}</p><div id="puzzle"></div><div id="feedback"></div></section></div>`);
  requestAnimationFrame(()=>$('.game-layer').classList.add('is-visible'));renderPuzzle(L);
 }
-function roomIntro(L){const intros={matching:'Waar staan deze tekens symbool voor?',timeline:'Sleep de vier perioden van oud naar jong. Pak een kaart vast en zet hem op de juiste plek.',quiz:'Beantwoord de vragen, kies uit de 4 opties.',pyramid:'Welke route bewandel je van buiten naar binnen als je een piramide in gaat?',memory:'Koppel de vier goden aan hun betekenis.',sequence:'Zet de stappen van mummificatie in de juiste volgorde.',differences:state.mode==='challenge'?'Bekijk beide afbeeldingen nauwkeurig. Vind de tien verschillen.':'Bekijk beide afbeeldingen nauwkeurig. Vind de vijf verschillen.',numbers:state.mode==='challenge'?'Los vijf Egyptische rekensommen op. Je krijgt optellen, aftrekken, vermenigvuldigen en delen.':'Los drie Egyptische optelsommen op. De tekens staan extra groot en ruim zodat je ze goed kunt tellen.',riddle:'Los vier raadsels op. Pas na het laatste juiste antwoord geeft de kamer haar sleutel prijs.',final:'Leg alleen de voorwerpen in de kist die duidelijk bij de geschiedenis van Egypte horen.'};return intros[L.type]}
+function roomIntro(L){const intros={matching:'Waar staan deze tekens symbool voor?',timeline:'Zet de vier perioden van oud naar jong. Gebruik de pijlen of sleep een kaart naar de juiste plek.',quiz:'Beantwoord de vragen, kies uit de 4 opties.',pyramid:'Welke route bewandel je van buiten naar binnen als je een piramide in gaat?',memory:'Koppel de vier goden aan hun betekenis.',sequence:'Zet de stappen van mummificatie in de juiste volgorde. Gebruik de pijlen of versleep de regels.',differences:state.mode==='challenge'?'Bekijk beide afbeeldingen nauwkeurig. Vind de tien verschillen.':'Bekijk beide afbeeldingen nauwkeurig. Vind de vijf verschillen.',numbers:state.mode==='challenge'?'Los vijf Egyptische rekensommen op. Je krijgt optellen, aftrekken, vermenigvuldigen en delen.':'Los drie Egyptische optelsommen op. De tekens staan extra groot en ruim zodat je ze goed kunt tellen.',riddle:'Los vier raadsels op. Pas na het laatste juiste antwoord geeft de kamer haar sleutel prijs.',final:'Leg alleen de voorwerpen in de kist die duidelijk bij de geschiedenis van Egypte horen.'};return intros[L.type]}
 function feedback(msg,ok=false){$('#feedback').innerHTML=`<div class="feedback ${ok?'ok':'bad'}">${msg}</div>`}
 function clearFeedback(){const box=$('#feedback');if(box)box.innerHTML=''}
 function fail(msg){state.score-=25;AudioEngine.bad();feedback(msg,false);updateHUD()}
@@ -81,14 +81,12 @@ function matching(p,L){
  const distractors=['Nijl','Piramide','Farao'];
  const options=shuffle(pairs.map(x=>x[1]).concat(state.mode==='challenge'?distractors:[]));
  p.innerHTML=rows.map(x=>`<div class="match-row"><div class="dropzone glyph">${x[0]}</div><select data-a="${x[1]}"><option value="">Kies betekenis</option>${options.map(y=>`<option>${y}</option>`).join('')}</select></div>`).join('')+`<button id="check">CONTROLEER</button>`;
- if(state.mode==='explore'){
-  p.querySelectorAll('select').forEach(s=>s.addEventListener('change',()=>s.classList.toggle('match-correct',s.value===s.dataset.a)));
- }
+ if(state.mode==='explore')p.querySelectorAll('.match-row select').forEach(select=>select.addEventListener('change',()=>select.closest('.match-row').classList.toggle('correct',select.value===select.dataset.a)));
  $('#check').addEventListener('click',()=>[...p.querySelectorAll('select')].every(s=>s.value===s.dataset.a)?solve(L):fail('Nog niet alle tekens zijn juist gekoppeld.'))
 }
 function timeline(p,L){
  const good=['Oude Rijk','Middenrijk','Nieuwe Rijk','Rijk van Cleopatra'];
- p.innerHTML=`<div class="timeline-list" aria-label="Versleepbare tijdlijn">${shuffle(good).map(x=>`<div class="draggable" draggable="true"><span class="drag-handle" aria-hidden="true">☰</span><span>${x}</span></div>`).join('')}</div><button id="check">CONTROLEER</button>`;
+ p.innerHTML=`<div class="timeline-list" aria-label="Sorteerbare tijdlijn">${shuffle(good).map(x=>sortableRow(x)).join('')}</div><button id="check">CONTROLEER</button>`;
  enableDragSort(p.querySelector('.timeline-list'));
  $('#check').addEventListener('click',()=>readOrder(p)===good.join('|')?solve(L):fail('De tijdlijn klopt nog niet. Sleep de perioden van het Oude Rijk naar het rijk van Cleopatra.'))
 }
@@ -115,7 +113,7 @@ function memory(p,L){
  const fields=challenge?['name','meaning','look']:['name','meaning'];
  const cards=shuffle(gods.flatMap(g=>fields.map(field=>({pair:g.id,value:g[field],field}))));
  let open=[],done=new Set(),locked=false;
- p.innerHTML=`<div class="memory-grid ${challenge?'memory-grid-challenge':''}">${cards.map((c,i)=>`<button class="memory-card" data-i="${i}" type="button" aria-label="Gesloten memorykaart"><span class="memory-card-inner"><span class="memory-front" aria-hidden="true"><span class="memory-scarab">𓆣</span></span><span class="memory-back">${c.value}</span></span></button>`).join('')}</div>`;
+ p.innerHTML=`<div class="memory-grid ${challenge?'memory-grid-challenge':''}">${cards.map((c,i)=>`<button class="memory-card" data-i="${i}" type="button" aria-label="Gesloten memorykaart"><span class="memory-front" aria-hidden="true"><span class="memory-scarab">𓆣</span></span><span class="memory-back">${c.value}</span></button>`).join('')}</div>`;
  const needed=fields.length;
  const buttons=[...p.querySelectorAll('.memory-card')];
  buttons.forEach(b=>b.addEventListener('click',()=>{
@@ -144,7 +142,7 @@ function memory(p,L){
 }
 function sequence(p,L){
  const good=['Organen verwijderen','Lichaam drogen met natron','Lichaam verzorgen','In linnen wikkelen','In sarcofaag leggen'];
- p.innerHTML=`<div class="timeline-list" aria-label="Versleepbare volgorde">${shuffle(good).map(x=>`<div class="draggable" draggable="true"><span class="drag-handle" aria-hidden="true">☰</span><span>${x}</span></div>`).join('')}</div><button id="check">CONTROLEER</button>`;
+ p.innerHTML=`<div class="timeline-list" aria-label="Sorteerbare volgorde">${shuffle(good).map(x=>sortableRow(x)).join('')}</div><button id="check">CONTROLEER</button>`;
  enableDragSort(p.querySelector('.timeline-list'));
  $('#check').addEventListener('click',()=>readOrder(p)===good.join('|')?solve(L):fail('De mummificatie verloopt nog niet in de juiste volgorde.'))
 }
@@ -253,8 +251,27 @@ function finalPuzzle(p,L){
  };
  renderSelection();
 }
-function enableDragSort(list){let dragged=null;list.querySelectorAll('.draggable').forEach(row=>{row.addEventListener('dragstart',()=>{dragged=row;row.classList.add('dragging')});row.addEventListener('dragend',()=>{row.classList.remove('dragging');dragged=null});row.addEventListener('dragover',e=>{e.preventDefault();if(!dragged||dragged===row)return;const box=row.getBoundingClientRect();const after=e.clientY>box.top+box.height/2;list.insertBefore(dragged,after?row.nextSibling:row)});row.addEventListener('touchstart',()=>row.classList.add('touch-ready'),{passive:true})})}
-function readOrder(p){return [...p.querySelectorAll('.draggable span:last-child')].map(x=>x.textContent.trim()).join('|')}
+function sortableRow(label){return `<div class="draggable" draggable="true"><span class="drag-handle" aria-hidden="true">☰</span><span class="drag-label">${label}</span><span class="move-controls"><button class="move-button move-down" type="button" aria-label="${label} omlaag" title="Naar beneden">⇩</button><button class="move-button move-up" type="button" aria-label="${label} omhoog" title="Naar boven">⇧</button></span></div>`}
+function enableDragSort(list){
+ let dragged=null;
+ const updateButtons=()=>{
+  const rows=[...list.querySelectorAll('.draggable')];
+  rows.forEach((row,index)=>{
+   row.querySelector('.move-up').disabled=index===0;
+   row.querySelector('.move-down').disabled=index===rows.length-1;
+  });
+ };
+ list.querySelectorAll('.draggable').forEach(row=>{
+  row.addEventListener('dragstart',e=>{if(e.target.closest?.('.move-button')){e.preventDefault();return}dragged=row;row.classList.add('dragging')});
+  row.addEventListener('dragend',()=>{row.classList.remove('dragging');dragged=null;updateButtons()});
+  row.addEventListener('dragover',e=>{e.preventDefault();if(!dragged||dragged===row)return;const box=row.getBoundingClientRect();const after=e.clientY>box.top+box.height/2;list.insertBefore(dragged,after?row.nextSibling:row)});
+  row.addEventListener('touchstart',e=>{if(!e.target.closest('.move-button'))row.classList.add('touch-ready')},{passive:true});
+  row.querySelector('.move-up').addEventListener('click',()=>{const previous=row.previousElementSibling;if(previous){list.insertBefore(row,previous);clearFeedback();updateButtons()}});
+  row.querySelector('.move-down').addEventListener('click',()=>{const next=row.nextElementSibling;if(next){list.insertBefore(next,row);clearFeedback();updateButtons()}});
+ });
+ updateButtons();
+}
+function readOrder(p){return [...p.querySelectorAll('.draggable .drag-label')].map(x=>x.textContent.trim()).join('|')}
 async function ending(){
  const run=++sceneRun;AudioEngine.startMusic('intro');const images=['assets/images/image20.jpeg','assets/images/image21.jpeg','assets/images/image22.jpeg','assets/images/image23.jpeg'];
  const elapsed=elapsedSeconds(),minutes=String(Math.floor(elapsed/60)).padStart(2,'0'),seconds=String(elapsed%60).padStart(2,'0');

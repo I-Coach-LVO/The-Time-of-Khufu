@@ -40,6 +40,10 @@ v1.8.7
 - De afzonderlijke kamermuziek van kamer 1 t/m 10 blijft ongewijzigd.
 
 v1.9.0
-- In kamer 1 krijgt iedere juiste keuze direct een groene rand in de modus Verkennen.
-- In Uitdaging verschijnt deze groene rand niet.
-- De memorykaarten in kamer 5 draaien in beide spelmodi zichtbaar om met een 3D-animatie.
+- Kamer 2 en kamer 6 hebben op iedere antwoordregel knoppen om de regel omhoog of omlaag te verplaatsen.
+- De bovenste knop omhoog en de onderste knop omlaag worden automatisch uitgeschakeld.
+- De bestaande sleepbediening blijft beschikbaar.
+
+v1.9.1
+- In kamer 1 krijgt ieder juist gekozen antwoord in Verkennen direct een groene rand.
+- In Uitdaging blijft kamer 1 ongewijzigd en verschijnt deze groene antwoordmarkering niet.
