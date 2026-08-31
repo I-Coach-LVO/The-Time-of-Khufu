@@ -87,6 +87,7 @@
 .mode-choice img{max-width:190px;max-height:155px;object-fit:contain;filter:drop-shadow(4px 5px 0 #000)}
 .mode-choice strong{font-size:1.25rem;color:var(--gold)}.mode-choice span{font-size:.8rem;line-height:1.4;font-weight:normal}
 .auto-next{font-size:.78rem;color:var(--sand)}
+.item-history{max-width:720px;margin:8px 0 12px;padding:10px 12px;border-left:5px solid var(--gold);background:#0007;line-height:1.5}
 .pyramid-route-layout{display:grid;grid-template-columns:1.15fr .85fr;gap:18px;align-items:center}
 .pyramid-route-image{width:100%;max-height:min(48vh,460px);object-fit:contain;border:4px solid #2b1733;background:#000}
 .memory-card{position:relative;min-height:86px;transform-style:preserve-3d;transition:transform .35s;background:#6a2f7c;overflow:hidden}
@@ -126,11 +127,25 @@
 /* Kamer 5: zichtbare 3D-omdraaiing van de memorykaarten */
 .memory-card{
   min-height:92px;
+  transform:none;
+  -webkit-transform:none;
+  transform-style:flat;
+  -webkit-transform-style:flat;
+  transition:box-shadow .2s;
+  padding:0;
+}
+.memory-card:hover{
+  transform:none;
+}
+.memory-card .memory-card-inner{
+  position:absolute;
+  inset:0;
+  display:block;
   transform:rotateY(0deg);
   -webkit-transform:rotateY(0deg);
   transform-style:preserve-3d;
   -webkit-transform-style:preserve-3d;
-  transition:transform .55s cubic-bezier(.2,.7,.2,1),box-shadow .2s;
+  transition:transform .55s cubic-bezier(.2,.7,.2,1);
   will-change:transform;
 }
 .memory-card .memory-front,
@@ -161,15 +176,24 @@
 }
 .memory-card.flipped,
 .memory-card.matched{
+  transform:none;
+  -webkit-transform:none;
+}
+.memory-card.flipped .memory-card-inner,
+.memory-card.matched .memory-card-inner{
   transform:rotateY(180deg);
   -webkit-transform:rotateY(180deg);
 }
 .memory-card.flipped .memory-front,
 .memory-card.matched .memory-front{
+  opacity:1;
+  visibility:visible;
   pointer-events:none;
 }
 .memory-card.flipped .memory-back,
 .memory-card.matched .memory-back{
+  opacity:1;
+  visibility:visible;
   z-index:3;
 }
 .memory-card.matched{
@@ -208,3 +232,12 @@
 .score-change.neutral{color:var(--gold)}
 @keyframes score-change{0%{opacity:0;transform:translateY(-10px) scale(.94)}12%,72%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-6px) scale(.98)}}
 @media(max-width:720px){.score-change{top:88px;right:10px;left:10px;text-align:center}}
+
+/* Leerzame terugblik tussen kamer 10 en de outro */
+.learning-recap-screen{min-height:620px;padding:22px;background:radial-gradient(circle at 50% 20%,#3b2447,#07040b 72%);display:grid;place-items:center}
+.learning-recap-panel{width:min(960px,100%);max-height:576px;overflow-y:auto;padding:22px;background:#100817f2;border:4px solid var(--gold);box-shadow:8px 8px 0 #000;scrollbar-width:thin}
+.recap-header{text-align:center;margin-bottom:18px}.recap-header h1{margin:.1em 0 .45em;color:var(--gold);text-transform:uppercase}.recap-header>p:last-child{line-height:1.5}
+.recap-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.recap-card{padding:14px;background:#1b1024;border:3px solid #5a3a65}.recap-card h2{margin:0 0 10px;color:var(--sand);font-size:1rem}.recap-card p{margin:7px 0;line-height:1.45}.recap-hints{margin:7px 0 0;padding-left:20px}.recap-hints li{margin:6px 0;line-height:1.4}.recap-no-hints{color:var(--sand)}
+#startOutro{display:block;margin:0 auto;position:sticky;bottom:0}
+@media(max-width:720px){.learning-recap-screen{min-height:690px;padding:12px}.learning-recap-panel{max-height:660px;padding:14px}.recap-list{grid-template-columns:1fr}}

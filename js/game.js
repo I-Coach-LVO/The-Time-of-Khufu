@@ -1,16 +1,16 @@
 const $=s=>document.querySelector(s);const scene=$('#scene');
-const state={room:0,score:1000,start:null,elapsed:0,timerStarted:false,timerRunning:false,timerStopped:false,inventory:[],solved:[],hints:0,hintUsage:{},hintHistory:{},fxEnabled:true,musicVolume:80,mode:null};
+const state={room:0,score:1000,start:null,elapsed:0,timerStarted:false,timerRunning:false,timerStopped:false,inventory:[],solved:[],hints:0,hintUsage:{},hintHistory:{},hintLog:[],fxEnabled:true,musicVolume:80,mode:null};
 function elapsedSeconds(){return state.elapsed+(state.timerRunning&&state.start?Math.floor((Date.now()-state.start)/1000):0)}
 function save(){localStorage.setItem('khufuSave',JSON.stringify({...state,elapsed:elapsedSeconds(),start:null,timerRunning:false}))}
 function startTimer(){if(state.timerStarted||state.timerStopped)return;state.timerStarted=true;state.timerRunning=true;state.start=Date.now();state.elapsed=0;save()}
 function stopTimer(){if(!state.timerRunning||state.timerStopped)return;state.elapsed=elapsedSeconds();state.start=null;state.timerRunning=false;state.timerStopped=true;save()}
-function load(){const x=localStorage.getItem('khufuSave');if(x){try{const saved=JSON.parse(x);Object.assign(state,saved);if(typeof saved.elapsed!=='number')state.elapsed=0;if(typeof saved.timerStarted!=='boolean')state.timerStarted=state.room>0;if(typeof saved.timerStopped!=='boolean')state.timerStopped=state.solved?.includes(10)||false;if(!saved.hintUsage||typeof saved.hintUsage!=='object')state.hintUsage={};if(!saved.hintHistory||typeof saved.hintHistory!=='object')state.hintHistory={};if(state.timerStarted&&!state.timerStopped){state.timerRunning=true;state.start=Date.now()}else{state.timerRunning=false;state.start=null}}catch{}}AudioEngine.fxEnabled=state.fxEnabled!==false;AudioEngine.musicVolume=Math.max(0,Math.min(1,(Number(state.musicVolume)||0)/100));}
+function load(){const x=localStorage.getItem('khufuSave');if(x){try{const saved=JSON.parse(x);Object.assign(state,saved);if(typeof saved.elapsed!=='number')state.elapsed=0;if(typeof saved.timerStarted!=='boolean')state.timerStarted=state.room>0;if(typeof saved.timerStopped!=='boolean')state.timerStopped=state.solved?.includes(10)||false;if(!saved.hintUsage||typeof saved.hintUsage!=='object')state.hintUsage={};if(!saved.hintHistory||typeof saved.hintHistory!=='object')state.hintHistory={};if(!Array.isArray(saved.hintLog))state.hintLog=[];if(state.timerStarted&&!state.timerStopped){state.timerRunning=true;state.start=Date.now()}else{state.timerRunning=false;state.start=null}}catch{}}AudioEngine.fxEnabled=state.fxEnabled!==false;AudioEngine.musicVolume=Math.max(0,Math.min(1,(Number(state.musicVolume)||0)/100));}
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const shuffle=a=>{const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b};
 function bg(url,extra=''){return `<div class="room-bg ${extra}" style="background-image:url('${url}')"></div><div class="dust ${extra}"></div>`}
 function hintCost(room=state.room){const used=Number(state.hintUsage?.[room]||0);if(used===0)return 0;if(state.mode==='challenge')return used<3?100:150;return 100}
 function updateHintButton(){const button=$('#hintBtn');if(!button)return;const cost=hintCost();button.textContent=cost?`HINT (-${cost})`:'HINT (1E GRATIS)';button.disabled=!state.room||!activeHint||state.solved.includes(state.room)}
-function updateHUD(){ $('#score').textContent=Math.max(0,state.score);$('#roomLabel').textContent=state.room?`KAMER ${state.room}/10`:'START';const inv=$('#inventory');inv.innerHTML=state.inventory.length?state.inventory.map(i=>`<div class="item" title="${i.name}">${i.icon}<span>${i.name}</span></div>`).join(''):'<span class="tiny">Nog geen voorwerpen gevonden.</span>';updateHintButton();save()}
+function updateHUD(){ $('#score').textContent=Math.max(0,state.score);$('#roomLabel').textContent=state.room?`KAMER ${state.room}/10`:'START';const inv=$('#inventory');inv.innerHTML=state.inventory.length?state.inventory.map(i=>{const current=LEVELS.find(level=>level.reward?.name===i.name)?.reward,history=i.history||current?.history||'';return `<div class="item" title="${history||i.name}" aria-label="${i.name}. ${history}">${i.icon}<span>${i.name}</span></div>`}).join(''):'<span class="tiny">Nog geen voorwerpen gevonden.</span>';updateHintButton();save()}
 function renderTimer(){const s=elapsedSeconds(),m=String(Math.floor(s/60)).padStart(2,'0'),r=String(s%60).padStart(2,'0');$('#timer').textContent=`${m}:${r}`}
 setInterval(renderTimer,250);
 let sceneRun=0;
@@ -84,8 +84,8 @@ function fail(msg){state.score-=50;AudioEngine.bad();feedback(`<strong>−50 pun
 function solve(L){
  clearFeedback();if(state.solved.includes(L.id))return;if(L.id===10)stopTimer();
  state.solved.push(L.id);if(L.reward)state.inventory.push(L.reward);state.score+=100;AudioEngine.ok();showScoreChange(100,'Juiste oplossing');updateHUD();
- let remaining=5;const target=()=>L.id<10?openRoom(L.id+1):ending();
- $('#puzzle').innerHTML=`<div class="reward">${L.reward?L.reward.icon:'🚪'}</div><h2>${L.reward?'Voorwerp gevonden: '+L.reward.name:'De deur gaat open!'}</h2><p class="auto-next">Automatisch verder over <b id="nextCount">${remaining}</b> seconden.</p><button id="continueBtn">${L.id<10?'NAAR KAMER '+(L.id+1):'NAAR BUITEN'}</button>`;
+ let remaining=2;const target=()=>L.id<10?openRoom(L.id+1):showLearningRecap();
+ $('#puzzle').innerHTML=`<div class="reward">${L.reward?L.reward.icon:'🚪'}</div><h2>${L.reward?'Voorwerp gevonden: '+L.reward.name:'De deur gaat open!'}</h2>${L.reward?`<p class="item-history">${L.reward.history}</p>`:''}<p class="auto-next">Automatisch verder over <b id="nextCount">${remaining}</b> seconden.</p><button id="continueBtn">${L.id<10?'NAAR KAMER '+(L.id+1):'NAAR BUITEN'}</button>`;
  let done=false;const go=()=>{if(done)return;done=true;clearInterval(tick);target()};$('#continueBtn').addEventListener('click',go);
  const tick=setInterval(()=>{remaining--;const c=$('#nextCount');if(c)c.textContent=remaining;if(remaining<=0)go()},1000);
 }
@@ -137,15 +137,15 @@ function pyramid(p,L){
 function memory(p,L){
  const challenge=state.mode==='challenge';
  const gods=[
-  {id:'ra',name:'Ra',meaning:'Zon',look:'Valkenkop'},
-  {id:'anubis',name:'Anubis',meaning:'Doden',look:'Jakhalskop'},
-  {id:'osiris',name:'Osiris',meaning:'Onderwereld',look:'Mummievormig lichaam'},
-  {id:'horus',name:'Horus',meaning:challenge?'Beschermer Farao':'Beschermer',look:'Valk'}
+  {id:'ra',name:'Ra',meaning:'Zon',look:'Valkenkop',explanation:'Ra was de zonnegod en werd vaak afgebeeld met een valkenkop en een zonneschijf.'},
+  {id:'anubis',name:'Anubis',meaning:'Doden',look:'Jakhalskop',explanation:'Anubis werd verbonden met balseming en de zorg voor de doden en had vaak een jakhalskop.'},
+  {id:'osiris',name:'Osiris',meaning:'Onderwereld',look:'Mummievormig lichaam',explanation:'Osiris was de heerser van de onderwereld en werd vaak met een mummievormig lichaam afgebeeld.'},
+  {id:'horus',name:'Horus',meaning:challenge?'Beschermer Farao':'Beschermer',look:'Valk',explanation:'Horus was een valkengod die nauw verbonden was met het koningschap en de bescherming van de farao.'}
  ];
  const fields=challenge?['name','meaning','look']:['name','meaning'];
  const cards=shuffle(gods.flatMap(g=>fields.map(field=>({pair:g.id,value:g[field],field}))));
  let open=[],done=new Set(),locked=false;
- p.innerHTML=`<div class="memory-grid ${challenge?'memory-grid-challenge':''}">${cards.map((c,i)=>`<button class="memory-card" data-i="${i}" type="button" aria-label="Gesloten memorykaart"><span class="memory-front" aria-hidden="true"><span class="memory-scarab">𓆣</span></span><span class="memory-back">${c.value}</span></button>`).join('')}</div>`;
+ p.innerHTML=`<div class="memory-grid ${challenge?'memory-grid-challenge':''}">${cards.map((c,i)=>`<button class="memory-card" data-i="${i}" type="button" aria-label="Gesloten memorykaart"><span class="memory-card-inner"><span class="memory-front" aria-hidden="true"><span class="memory-scarab">𓆣</span></span><span class="memory-back">${c.value}</span></span></button>`).join('')}</div>`;
  const needed=fields.length;
  const buttons=[...p.querySelectorAll('.memory-card')];
  setActiveHints(()=>{
@@ -163,7 +163,8 @@ function memory(p,L){
   const selected=open.map(k=>cards[k]);
   const match=selected.every(c=>c.pair===selected[0].pair)&&new Set(selected.map(c=>c.field)).size===needed;
   if(match){
-   clearFeedback();
+   const matchedGod=gods.find(g=>g.id===selected[0].pair);
+   if(challenge)feedback(`<strong>Correct drietal.</strong> ${matchedGod.explanation}`,true);else clearFeedback();
    open.forEach(k=>{done.add(k);buttons[k].classList.add('matched');buttons[k].disabled=true});
    open=[];locked=false;
    if(done.size===cards.length)setTimeout(()=>solve(L),2000);
@@ -333,6 +334,16 @@ function enableDragSort(list){
  updateButtons();
 }
 function readOrder(p){return [...p.querySelectorAll('.draggable .drag-label')].map(x=>x.textContent.trim()).join('|')}
+function showLearningRecap(){
+ const run=++sceneRun;activeHint=null;updateHintButton();
+ const cards=LEVELS.map(level=>{
+  const logs=state.hintLog.filter(entry=>entry.room===level.id),used=Number(state.hintUsage[level.id]||0);
+  const hintDetails=logs.length?`<ul class="recap-hints">${logs.map((entry,index)=>`<li><strong>Hint ${index+1}${entry.cost?` (−${entry.cost} punten)`:' (gratis)'}:</strong> ${entry.text}</li>`).join('')}</ul>`:used?`<p class="recap-no-hints">${used} ${used===1?'hint is':'hints zijn'} gebruikt; de tekst van deze eerdere hint is niet opgeslagen.</p>`:'<p class="recap-no-hints">Geen hints gebruikt.</p>';
+  return `<article class="recap-card"><h2><span aria-hidden="true">${state.solved.includes(level.id)?'✓':'○'}</span> Kamer ${level.id}: ${level.title}</h2><p><strong>Beheerst onderwerp:</strong> ${level.topic}.</p><p><strong>Kernfeit:</strong> ${level.fact}</p><div><strong>Gebruikte hints:</strong>${hintDetails}</div></article>`;
+ }).join('');
+ scene.innerHTML=`<div class="learning-recap-screen"><section class="learning-recap-panel" aria-labelledby="recapTitle"><header class="recap-header"><p class="tiny">JOUW LEEROPBRENGST</p><h1 id="recapTitle">Terugblik op de ontsnapping</h1><p>Je hebt tien onderwerpen uit het Oude Egypte onderzocht. Bekijk wat je hebt geleerd en welke hulp je hebt gebruikt.</p></header><div class="recap-list">${cards}</div><button id="startOutro" type="button">START DE OUTRO</button></section></div>`;
+ $('#startOutro').addEventListener('click',()=>{if(run===sceneRun)ending()});
+}
 async function ending(){
  const run=++sceneRun;AudioEngine.startMusic('intro');const images=['assets/images/image20.jpeg','assets/images/image21.jpeg','assets/images/image22.jpeg','assets/images/image23.jpeg'];
  const elapsed=elapsedSeconds(),minutes=String(Math.floor(elapsed/60)).padStart(2,'0'),seconds=String(elapsed%60).padStart(2,'0');
@@ -342,7 +353,7 @@ async function ending(){
  $('#skipOutro').addEventListener('click',()=>{if(run!==sceneRun)return;sceneRun++;const old=sceneRun;sceneRun=run;showScore();sceneRun=old});
  for(const frame of scene.querySelectorAll('.outro-frame')){await wait(80);if(run!==sceneRun)return;frame.classList.add('is-visible');await wait(7000);if(run!==sceneRun)return;frame.classList.remove('is-visible');await wait(2000);if(run!==sceneRun)return}showScore();
 }
-function resetGame(){sceneRun++;localStorage.removeItem('khufuSave');Object.assign(state,{room:0,score:1000,start:null,elapsed:0,timerStarted:false,timerRunning:false,timerStopped:false,inventory:[],solved:[],hints:0,hintUsage:{},hintHistory:{},fxEnabled:AudioEngine.fxEnabled,musicVolume:Math.round(AudioEngine.musicVolume*100),mode:null});renderTimer();syncAudioControls();intro()}
+function resetGame(){sceneRun++;localStorage.removeItem('khufuSave');Object.assign(state,{room:0,score:1000,start:null,elapsed:0,timerStarted:false,timerRunning:false,timerStopped:false,inventory:[],solved:[],hints:0,hintUsage:{},hintHistory:{},hintLog:[],fxEnabled:AudioEngine.fxEnabled,musicVolume:Math.round(AudioEngine.musicVolume*100),mode:null});renderTimer();syncAudioControls();intro()}
 $('#hintBtn').addEventListener('click',()=>{
  if(!state.room||state.solved.includes(state.room))return;
  const room=state.room,candidates=availableHints(),history=state.hintHistory[room]||[];
@@ -351,6 +362,7 @@ $('#hintBtn').addEventListener('click',()=>{
  const cost=hintCost(room);
  state.score-=cost;state.hints++;state.hintUsage[room]=Number(state.hintUsage[room]||0)+1;
  state.hintHistory[room]=[...history,next.key];
+ state.hintLog.push({room,key:next.key,text:next.text,cost});
  feedback(`<strong>${cost?`−${cost} punten — hint.`:'Gratis hint.'}</strong> ${next.text}`,true);showScoreChange(-cost,cost?'Hint gebruikt':'Eerste hint gratis');updateHUD();
 });
 function syncAudioControls(){const slider=$('#musicVolume'),out=$('#musicVolumeValue'),fx=$('#soundBtn');slider.value=state.musicVolume;out.value=`${state.musicVolume}%`;out.textContent=`${state.musicVolume}%`;fx.textContent=`FX: ${state.fxEnabled?'AAN':'UIT'}`;AudioEngine.fxEnabled=state.fxEnabled;AudioEngine.setMusicVolume(state.musicVolume/100)}
