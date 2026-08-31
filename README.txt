@@ -1,4 +1,4 @@
-Escape the Pyramid – The Time of Khufu v1.9.2
+Escape the Pyramid – The Time of Khufu v1.9.3
 
 Starten:
 1. Pak het zipbestand volledig uit.
@@ -54,3 +54,9 @@ v1.9.2
 - Alle kamers hebben stapsgewijze, voortgangsafhankelijke hints met aangepaste kosten per speelstijl.
 - Kamer 8 gebruikt in de latere sommen ook het Egyptische honderdtalsymbool (opgerold touw).
 - Kamer 9 heeft een duidelijke titel en controleknop, accepteert Nederlandse en Engelse antwoorden en bevat twee extra raadsels in Uitdaging.
+
+v1.9.3
+- De puntentelling toont kort en duidelijk waarom punten worden toegevoegd of afgetrokken.
+- Een verkeerde oplossing kost voortaan 50 punten.
+- Alle volledige instructie-, hint- en feedbackzinnen beginnen met een hoofdletter en eindigen met een leesteken.
+- Kamer 4 gebruikt in Verkennen een piramidedoorsnede met vier aanduidingen en in Uitdaging een doorsnede met vijf aanduidingen.

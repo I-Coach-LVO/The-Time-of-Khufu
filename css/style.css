@@ -88,7 +88,7 @@
 .mode-choice strong{font-size:1.25rem;color:var(--gold)}.mode-choice span{font-size:.8rem;line-height:1.4;font-weight:normal}
 .auto-next{font-size:.78rem;color:var(--sand)}
 .pyramid-route-layout{display:grid;grid-template-columns:1.15fr .85fr;gap:18px;align-items:center}
-.pyramid-route-image{width:100%;max-height:340px;object-fit:contain;border:4px solid #2b1733;background:#000}
+.pyramid-route-image{width:100%;max-height:min(48vh,460px);object-fit:contain;border:4px solid #2b1733;background:#000}
 .memory-card{position:relative;min-height:86px;transform-style:preserve-3d;transition:transform .35s;background:#6a2f7c;overflow:hidden}
 .memory-card .memory-front,.memory-card .memory-back{position:absolute;inset:0;display:grid;place-items:center;padding:8px;backface-visibility:hidden}
 .memory-card .memory-front{font-size:2rem}.memory-card .memory-back{transform:rotateY(180deg);font-size:.76rem;background:#f0c35e;color:#21152a}
@@ -199,3 +199,12 @@
   .intro-nav-controls{order:-1;flex-basis:100%;width:100%;justify-content:center}
   .intro-nav-controls button{min-width:0;flex:1}
 }
+
+/* Transparante, kort zichtbare puntentelling */
+.game-shell{position:relative}
+.score-change{position:absolute;z-index:20;top:58px;right:16px;padding:10px 14px;border:3px solid currentColor;background:#100817;color:var(--cream);font-weight:900;box-shadow:4px 4px 0 #000;pointer-events:none;animation:score-change 2.2s ease forwards}
+.score-change.positive{color:var(--ok)}
+.score-change.negative{color:var(--danger)}
+.score-change.neutral{color:var(--gold)}
+@keyframes score-change{0%{opacity:0;transform:translateY(-10px) scale(.94)}12%,72%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-6px) scale(.98)}}
+@media(max-width:720px){.score-change{top:88px;right:10px;left:10px;text-align:center}}

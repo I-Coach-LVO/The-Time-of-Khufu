@@ -15,6 +15,13 @@ function renderTimer(){const s=elapsedSeconds(),m=String(Math.floor(s/60)).padSt
 setInterval(renderTimer,250);
 let sceneRun=0;
 let activeHint=null;
+let scoreEventTimer=null;
+function showScoreChange(amount,reason){
+ const previous=$('.score-change');if(previous)previous.remove();
+ const event=document.createElement('div');event.className=`score-change ${amount>0?'positive':amount<0?'negative':'neutral'}`;event.setAttribute('role','status');event.setAttribute('aria-live','assertive');
+ const value=amount>0?`+${amount}`:amount<0?`−${Math.abs(amount)}`:'0';event.textContent=`${value} punten — ${reason}.`;$('#game').appendChild(event);
+ clearTimeout(scoreEventTimer);scoreEventTimer=setTimeout(()=>event.remove(),2200);
+}
 function setActiveHints(source){activeHint=typeof source==='function'?source:()=>source;updateHintButton()}
 function availableHints(){
  const source=activeHint?activeHint():[LEVELS[state.room-1]?.hint];
@@ -73,10 +80,10 @@ async function openRoom(n){
 function roomIntro(L){const intros={matching:'Waar staan deze tekens symbool voor?',timeline:'Zet de vier perioden van oud naar jong. Gebruik de pijlen of sleep een kaart naar de juiste plek.',quiz:'Beantwoord de vragen, kies uit de 4 opties.',pyramid:'Welke route bewandel je van buiten naar binnen als je een piramide in gaat?',memory:'Koppel de vier goden aan hun betekenis.',sequence:'Zet de stappen van mummificatie in de juiste volgorde. Gebruik de pijlen of versleep de regels.',differences:state.mode==='challenge'?'Bekijk beide afbeeldingen nauwkeurig. Vind de tien verschillen.':'Bekijk beide afbeeldingen nauwkeurig. Vind de vijf verschillen.',numbers:state.mode==='challenge'?'Los vijf Egyptische rekensommen op. Je krijgt optellen, aftrekken, vermenigvuldigen en delen.':'Los drie Egyptische optelsommen op. De tekens staan extra groot en ruim zodat je ze goed kunt tellen.',riddle:'Los vier raadsels op. Pas na het laatste juiste antwoord geeft de kamer haar sleutel prijs.',final:'Leg alleen de voorwerpen in de kist die duidelijk bij de geschiedenis van Egypte horen.'};return intros[L.type]}
 function feedback(msg,ok=false){$('#feedback').innerHTML=`<div class="feedback ${ok?'ok':'bad'}">${msg}</div>`}
 function clearFeedback(){const box=$('#feedback');if(box)box.innerHTML=''}
-function fail(msg){state.score-=25;AudioEngine.bad();feedback(msg,false);updateHUD()}
+function fail(msg){state.score-=50;AudioEngine.bad();feedback(`<strong>−50 punten — onjuist.</strong> ${msg}`,false);showScoreChange(-50,'Verkeerd antwoord');updateHUD()}
 function solve(L){
  clearFeedback();if(state.solved.includes(L.id))return;if(L.id===10)stopTimer();
- state.solved.push(L.id);if(L.reward)state.inventory.push(L.reward);state.score+=100;AudioEngine.ok();updateHUD();
+ state.solved.push(L.id);if(L.reward)state.inventory.push(L.reward);state.score+=100;AudioEngine.ok();showScoreChange(100,'Juiste oplossing');updateHUD();
  let remaining=5;const target=()=>L.id<10?openRoom(L.id+1):ending();
  $('#puzzle').innerHTML=`<div class="reward">${L.reward?L.reward.icon:'🚪'}</div><h2>${L.reward?'Voorwerp gevonden: '+L.reward.name:'De deur gaat open!'}</h2><p class="auto-next">Automatisch verder over <b id="nextCount">${remaining}</b> seconden.</p><button id="continueBtn">${L.id<10?'NAAR KAMER '+(L.id+1):'NAAR BUITEN'}</button>`;
  let done=false;const go=()=>{if(done)return;done=true;clearInterval(tick);target()};$('#continueBtn').addEventListener('click',go);
@@ -114,9 +121,12 @@ function quiz(p,L){
  const show=()=>{const [question,answer]=qs[i],answers=shuffle(['Farao','Priester','Schrijver','Slaaf']),hintKey=`quiz-${question}`;setActiveHints(()=>[{key:`${hintKey}-method`,text:'Let op het werkwoord in de vraag: besturen, rituelen uitvoeren, schrijven of zwaar werk doen.'},{key:`${hintKey}-clue`,text:roleClues[answer]},{key:`${hintKey}-answer`,text:`Bij deze vraag is “${answer}” het juiste beroep.`}]);p.innerHTML=`<p class="progress">Vraag ${i+1} van ${qs.length}</p><h2>${question}</h2><div class="choices">${answers.map(a=>`<button class="choice">${a}</button>`).join('')}</div>`;p.querySelectorAll('.choice').forEach(b=>b.addEventListener('click',()=>{if(b.textContent===answer){clearFeedback();i++;i===qs.length?solve(L):show()}else fail('Dat is niet de juiste rol.')}))};show()
 }
 function pyramid(p,L){
- const good=state.mode==='challenge'?['ingang','afdalende gang','stijgende gang','Grote Galerij','Koningskamer']:['ingang','gang','Grote Galerij','grafkamer'];
+ const challenge=state.mode==='challenge';
+ const good=challenge?['ingang','afdalende gang','stijgende gang','Grote Galerij','Koningskamer']:['ingang','gang','Grote Galerij','grafkamer'];
  const options=shuffle(good);
- p.innerHTML=`<div class="pyramid-route-layout"><img class="pyramid-route-image" src="assets/images/pyramid-route.png" alt="Piramide van buitenaf"><div class="pyramid-slots">${good.map((a,i)=>`<label><b>${i+1}</b><select data-a="${a}"><option value="">Kies onderdeel</option>${options.map(x=>`<option>${x}</option>`).join('')}</select></label>`).join('')}<button id="check">CONTROLEER</button></div></div>`;
+ const routeImage=challenge?'assets/images/kamer4-uitdagend.png':'assets/images/kamer4-verkennend.png';
+ const routeAlt=challenge?'Doorsnede van de piramide met vijf genummerde onderdelen.':'Doorsnede van de piramide met vier genummerde onderdelen.';
+ p.innerHTML=`<div class="pyramid-route-layout"><img class="pyramid-route-image" src="${routeImage}" alt="${routeAlt}"><div class="pyramid-slots">${good.map((a,i)=>`<label><b>${i+1}</b><select data-a="${a}"><option value="">Kies onderdeel</option>${options.map(x=>`<option>${x}</option>`).join('')}</select></label>`).join('')}<button id="check">CONTROLEER</button></div></div>`;
  setActiveHints(()=>{
   const hints=[{key:'pyramid-method',text:'Volg de route op de afbeelding van buiten naar steeds dieper in de piramide.'}];
   [...p.querySelectorAll('select')].forEach((select,index)=>{if(select.value!==select.dataset.a)hints.push({key:`pyramid-${select.dataset.a}`,text:`Bij stap ${index+1} hoort “${select.dataset.a}”.`})});
@@ -341,7 +351,7 @@ $('#hintBtn').addEventListener('click',()=>{
  const cost=hintCost(room);
  state.score-=cost;state.hints++;state.hintUsage[room]=Number(state.hintUsage[room]||0)+1;
  state.hintHistory[room]=[...history,next.key];
- feedback(`<strong>${cost?`Hint (-${cost} punten)`:'Gratis hint'}:</strong> ${next.text}`,true);updateHUD();
+ feedback(`<strong>${cost?`−${cost} punten — hint.`:'Gratis hint.'}</strong> ${next.text}`,true);showScoreChange(-cost,cost?'Hint gebruikt':'Eerste hint gratis');updateHUD();
 });
 function syncAudioControls(){const slider=$('#musicVolume'),out=$('#musicVolumeValue'),fx=$('#soundBtn');slider.value=state.musicVolume;out.value=`${state.musicVolume}%`;out.textContent=`${state.musicVolume}%`;fx.textContent=`FX: ${state.fxEnabled?'AAN':'UIT'}`;AudioEngine.fxEnabled=state.fxEnabled;AudioEngine.setMusicVolume(state.musicVolume/100)}
 $('#soundBtn').addEventListener('click',e=>{state.fxEnabled=AudioEngine.toggleFX();e.target.textContent=`FX: ${state.fxEnabled?'AAN':'UIT'}`;save()});
