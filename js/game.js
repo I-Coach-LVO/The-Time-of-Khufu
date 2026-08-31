@@ -77,17 +77,16 @@ async function openRoom(n){
  scene.insertAdjacentHTML('beforeend',`<div class="content game-layer"><section class="panel"><h1>Kamer ${L.id}: ${L.title}</h1><p>${roomIntro(L)}</p><div id="puzzle"></div><div id="feedback"></div></section></div>`);
  requestAnimationFrame(()=>$('.game-layer').classList.add('is-visible'));renderPuzzle(L);
 }
-function roomIntro(L){const intros={matching:'Waar staan deze tekens symbool voor?',timeline:'Zet de vier perioden van oud naar jong. Gebruik de pijlen of sleep een kaart naar de juiste plek.',quiz:'Beantwoord de vragen, kies uit de 4 opties.',pyramid:'Welke route bewandel je van buiten naar binnen als je een piramide in gaat?',memory:'Koppel de vier goden aan hun betekenis.',sequence:'Zet de stappen van mummificatie in de juiste volgorde. Gebruik de pijlen of versleep de regels.',differences:state.mode==='challenge'?'Bekijk beide afbeeldingen nauwkeurig. Vind de tien verschillen.':'Bekijk beide afbeeldingen nauwkeurig. Vind de vijf verschillen.',numbers:state.mode==='challenge'?'Los vijf Egyptische rekensommen op. Je krijgt optellen, aftrekken, vermenigvuldigen en delen.':'Los drie Egyptische optelsommen op. De tekens staan extra groot en ruim zodat je ze goed kunt tellen.',riddle:'Los vier raadsels op. Pas na het laatste juiste antwoord geeft de kamer haar sleutel prijs.',final:'Leg alleen de voorwerpen in de kist die duidelijk bij de geschiedenis van Egypte horen.'};return intros[L.type]}
+function roomIntro(L){const intros={matching:'Waar staan deze tekens symbool voor?',timeline:state.mode==='challenge'?'Zet de vijf historische gebeurtenissen van oud naar jong. Gebruik de pijlen of sleep een kaart naar de juiste plek.':'Zet de vier perioden van oud naar jong. Gebruik de pijlen of sleep een kaart naar de juiste plek.',quiz:'Beantwoord de vragen, kies uit de 4 opties.',pyramid:'Welke route bewandel je van buiten naar binnen als je een piramide in gaat?',memory:'Koppel de vier goden aan hun betekenis.',sequence:'Zet de stappen van mummificatie in de juiste volgorde. Gebruik de pijlen of versleep de regels.',differences:state.mode==='challenge'?'Bekijk beide afbeeldingen nauwkeurig. Vind de tien verschillen.':'Bekijk beide afbeeldingen nauwkeurig. Vind de vijf verschillen.',numbers:state.mode==='challenge'?'Los vijf Egyptische rekensommen op. Je krijgt optellen, aftrekken, vermenigvuldigen en delen.':'Los drie Egyptische optelsommen op. De tekens staan extra groot en ruim zodat je ze goed kunt tellen.',riddle:'Los vier raadsels op. Pas na het laatste juiste antwoord geeft de kamer haar sleutel prijs.',final:'Leg alleen de voorwerpen in de kist die duidelijk bij de geschiedenis van Egypte horen.'};return intros[L.type]}
 function feedback(msg,ok=false){$('#feedback').innerHTML=`<div class="feedback ${ok?'ok':'bad'}">${msg}</div>`}
 function clearFeedback(){const box=$('#feedback');if(box)box.innerHTML=''}
 function fail(msg){state.score-=50;AudioEngine.bad();feedback(`<strong>−50 punten — onjuist.</strong> ${msg}`,false);showScoreChange(-50,'Verkeerd antwoord');updateHUD()}
 function solve(L){
  clearFeedback();if(state.solved.includes(L.id))return;if(L.id===10)stopTimer();
  state.solved.push(L.id);if(L.reward)state.inventory.push(L.reward);state.score+=100;AudioEngine.ok();showScoreChange(100,'Juiste oplossing');updateHUD();
- let remaining=2;const target=()=>L.id<10?openRoom(L.id+1):showLearningRecap();
- $('#puzzle').innerHTML=`<div class="reward">${L.reward?L.reward.icon:'🚪'}</div><h2>${L.reward?'Voorwerp gevonden: '+L.reward.name:'De deur gaat open!'}</h2>${L.reward?`<p class="item-history">${L.reward.history}</p>`:''}<p class="auto-next">Automatisch verder over <b id="nextCount">${remaining}</b> seconden.</p><button id="continueBtn">${L.id<10?'NAAR KAMER '+(L.id+1):'NAAR BUITEN'}</button>`;
- let done=false;const go=()=>{if(done)return;done=true;clearInterval(tick);target()};$('#continueBtn').addEventListener('click',go);
- const tick=setInterval(()=>{remaining--;const c=$('#nextCount');if(c)c.textContent=remaining;if(remaining<=0)go()},1000);
+ const target=()=>L.id<10?openRoom(L.id+1):showLearningRecap();
+ $('#puzzle').innerHTML=`<div class="reward">${L.reward?L.reward.icon:'🚪'}</div><h2>${L.reward?'Voorwerp gevonden: '+L.reward.name:'De deur gaat open!'}</h2>${L.reward?`<p class="item-history">${L.reward.history}</p>`:''}<p>Lees de uitleg rustig door en ga verder wanneer je klaar bent.</p><button id="continueBtn">${L.id<10?'NAAR KAMER '+(L.id+1):'NAAR DE TERUGBLIK'}</button>`;
+ $('#continueBtn').addEventListener('click',target,{once:true});
 }
 function renderPuzzle(L){const p=$('#puzzle');({matching,timeline,quiz,pyramid,memory,sequence,differences,numbers,riddle,final:finalPuzzle}[L.type])(p,L)}
 function matching(p,L){
@@ -104,14 +103,16 @@ function matching(p,L){
  $('#check').addEventListener('click',()=>[...p.querySelectorAll('select')].every(s=>s.value===s.dataset.a)?solve(L):fail('Nog niet alle tekens zijn juist gekoppeld.'))
 }
 function timeline(p,L){
- const good=['Oude Rijk','Middenrijk','Nieuwe Rijk','Rijk van Cleopatra'];
+ const challenge=state.mode==='challenge';
+ const good=challenge?['De piramide van Khufu wordt gebouwd.','Mentuhotep II herenigt Egypte.','Hatsjepsoet wordt farao.','Toetanchamon wordt farao.','Cleopatra VII regeert over Egypte.']:['Oude Rijk','Middenrijk','Nieuwe Rijk','Rijk van Cleopatra'];
  p.innerHTML=`<div class="timeline-list" aria-label="Sorteerbare tijdlijn">${shuffle(good).map(x=>sortableRow(x)).join('')}</div><button id="check">CONTROLEER</button>`;
  setActiveHints(()=>{
   const current=readOrder(p).split('|');
-  return [{key:'timeline-method',text:'Werk van het oudste rijk bovenaan naar de tijd van Cleopatra onderaan.'},...good.flatMap((period,index)=>current[index]===period?[]:[{key:`timeline-${period}`,text:`Op plaats ${index+1} hoort “${period}”.`}])];
+  const method=challenge?'Begin met de bouw van de grote piramides en eindig bij Cleopatra; vergelijk de heersers daartussen.':'Werk van het oudste rijk bovenaan naar de tijd van Cleopatra onderaan.';
+  return [{key:'timeline-method',text:method},...good.flatMap((period,index)=>current[index]===period?[]:[{key:`timeline-${period}`,text:`Op plaats ${index+1} hoort “${period.replace(/[.!?]+$/,'')}”.`}])];
  });
  enableDragSort(p.querySelector('.timeline-list'));
- $('#check').addEventListener('click',()=>readOrder(p)===good.join('|')?solve(L):fail('De tijdlijn klopt nog niet. Sleep de perioden van het Oude Rijk naar het rijk van Cleopatra.'))
+ $('#check').addEventListener('click',()=>readOrder(p)===good.join('|')?solve(L):fail(challenge?'De tijdlijn klopt nog niet. Plaats de gebeurtenissen vanaf de bouw van de piramide van Khufu tot de regering van Cleopatra.':'De tijdlijn klopt nog niet. Sleep de perioden van het Oude Rijk naar het rijk van Cleopatra.'))
 }
 function quiz(p,L){
  const base=[['Wie bestuurde Egypte?','Farao'],['Wie voerde religieuze rituelen uit?','Priester'],['Wie hield administratie bij?','Schrijver'],['Wie had de minste vrijheid?','Slaaf']];
@@ -178,7 +179,7 @@ function memory(p,L){
  }))
 }
 function sequence(p,L){
- const good=['Organen verwijderen','Lichaam drogen met natron','Lichaam verzorgen','In linnen wikkelen','In sarcofaag leggen'];
+ const good=state.mode==='challenge'?['Lichaam wassen','Organen verwijderen','Lichaam drogen met natron','Lichaam verzorgen en vullen','Amuletten plaatsen','In linnen wikkelen','In sarcofaag leggen']:['Organen verwijderen','Lichaam drogen met natron','Lichaam verzorgen','In linnen wikkelen','In sarcofaag leggen'];
  p.innerHTML=`<div class="timeline-list" aria-label="Sorteerbare volgorde">${shuffle(good).map(x=>sortableRow(x)).join('')}</div><button id="check">CONTROLEER</button>`;
  setActiveHints(()=>{
   const current=readOrder(p).split('|');
@@ -313,7 +314,7 @@ function finalPuzzle(p,L){
  };
  renderSelection();
 }
-function sortableRow(label){return `<div class="draggable" draggable="true"><span class="drag-handle" aria-hidden="true">☰</span><span class="drag-label">${label}</span><span class="move-controls"><button class="move-button move-down" type="button" aria-label="${label} omlaag" title="Naar beneden">⇩</button><button class="move-button move-up" type="button" aria-label="${label} omhoog" title="Naar boven">⇧</button></span></div>`}
+function sortableRow(label){const accessibleLabel=label.replace(/[.!?]+$/,'');return `<div class="draggable" draggable="true"><span class="drag-handle" aria-hidden="true">☰</span><span class="drag-label">${label}</span><span class="move-controls"><button class="move-button move-down" type="button" aria-label="${accessibleLabel} omlaag" title="Naar beneden">⇩</button><button class="move-button move-up" type="button" aria-label="${accessibleLabel} omhoog" title="Naar boven">⇧</button></span></div>`}
 function enableDragSort(list){
  let dragged=null;
  const updateButtons=()=>{

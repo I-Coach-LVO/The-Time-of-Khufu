@@ -1,12 +1,12 @@
 const AudioEngine={
- fxEnabled:true,ctx:null,master:null,musicGain:null,musicTimer:null,fileMusic:null,introFadeFrame:null,step:0,currentRoom:null,musicVolume:.8,
+ fxEnabled:true,ctx:null,master:null,musicGain:null,musicTimer:null,fileMusic:null,introFadeFrame:null,step:0,currentRoom:null,musicVolume:.8,introMusicScale:.3,
  init(){
   if(this.ctx)return;
   this.ctx=new (window.AudioContext||window.webkitAudioContext)();
   this.master=this.ctx.createGain();this.master.gain.value=.98;this.master.connect(this.ctx.destination);
   this.musicGain=this.ctx.createGain();this.musicGain.gain.value=this.musicVolume;this.musicGain.connect(this.master);
   this.fileMusic=new Audio('assets/audio/bilady_intro_outro.wav');
-  this.fileMusic.loop=true;this.fileMusic.preload='auto';this.fileMusic.volume=this.musicVolume*.5;
+  this.fileMusic.loop=true;this.fileMusic.preload='auto';this.fileMusic.volume=this.musicVolume*this.introMusicScale;
  },
  unlock(){
   this.init();if(this.ctx.state==='suspended')this.ctx.resume();
@@ -60,7 +60,7 @@ const AudioEngine={
    const started=performance.now(),from=this.fileMusic.volume,duration=4000;
    const fade=now=>{
     if(this.currentRoom!=='intro'||this.musicVolume<=0){this.introFadeFrame=null;return}
-    const progress=Math.min(1,(now-started)/duration),target=this.musicVolume*.5;
+    const progress=Math.min(1,(now-started)/duration),target=this.musicVolume*this.introMusicScale;
     this.fileMusic.volume=Math.min(1,from+(target-from)*progress);
     if(progress<1)this.introFadeFrame=requestAnimationFrame(fade);else this.introFadeFrame=null;
    };
@@ -99,13 +99,13 @@ const AudioEngine={
   this.musicVolume=Math.max(0,Math.min(1,Number(value)||0));this.init();
   this.musicGain.gain.cancelScheduledValues(this.ctx.currentTime);
   this.musicGain.gain.setTargetAtTime(this.musicVolume,this.ctx.currentTime,.035);
-  if(this.fileMusic&&this.currentRoom!=='intro')this.fileMusic.volume=this.musicVolume*.5;
+  if(this.fileMusic&&this.currentRoom!=='intro')this.fileMusic.volume=this.musicVolume*this.introMusicScale;
   if(this.musicVolume===0){
    if(this.musicTimer){clearInterval(this.musicTimer);this.musicTimer=null}
    if(this.fileMusic&&!this.fileMusic.paused)this.fileMusic.pause();
   }else if(this.currentRoom==='intro'){
    if(this.fileMusic.paused)this.playIntro(true);
-   else if(!this.introFadeFrame)this.fileMusic.volume=this.musicVolume*.5;
+   else if(!this.introFadeFrame)this.fileMusic.volume=this.musicVolume*this.introMusicScale;
   }else if(this.currentRoom!==null&&!this.musicTimer){
    this.startMusic(this.currentRoom);
   }
