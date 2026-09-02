@@ -92,8 +92,8 @@ function renderPuzzle(L){const p=$('#puzzle');({matching,timeline,quiz,pyramid,m
 function matching(p,L){
  const pairs=[['☀','Zon'],['≈','Water'],['𓂀','Oog'],['𓅃','Valk'],['☥','Leven'],['𓆣','Scarabee']],rows=shuffle(pairs);
  const distractors=['Nijl','Piramide','Farao'];
- const options=shuffle(pairs.map(x=>x[1]).concat(state.mode==='challenge'?distractors:[]));
- p.innerHTML=rows.map(x=>`<div class="match-row"><div class="dropzone glyph">${x[0]}</div><select data-a="${x[1]}"><option value="">Kies betekenis</option>${options.map(y=>`<option>${y}</option>`).join('')}</select></div>`).join('')+`<button id="check">CONTROLEER</button>`;
+ const options=pairs.map(x=>x[1]).concat(state.mode==='challenge'?distractors:[]);
+ p.innerHTML=rows.map(x=>`<div class="match-row"><div class="dropzone glyph">${x[0]}</div><select data-a="${x[1]}"><option value="">Kies betekenis</option>${shuffle(options).map(y=>`<option>${y}</option>`).join('')}</select></div>`).join('')+`<button id="check">CONTROLEER</button>`;
  setActiveHints(()=>{
   const hints=[{key:'matching-method',text:'Kijk eerst naar symbolen die je uit het dagelijks leven herkent.'}];
   [...p.querySelectorAll('select')].forEach((select,index)=>{if(select.value!==select.dataset.a)hints.push({key:`matching-${select.dataset.a}`,text:`Het symbool ${rows[index][0]} hoort bij “${select.dataset.a}”.`})});
@@ -123,11 +123,10 @@ function quiz(p,L){
 }
 function pyramid(p,L){
  const challenge=state.mode==='challenge';
- const good=challenge?['ingang','afdalende gang','stijgende gang','Grote Galerij','Koningskamer']:['ingang','gang','Grote Galerij','grafkamer'];
- const options=shuffle(good);
+ const good=challenge?['Ingang','Afdalende gang','Stijgende gang','Grote Galerij','Koningskamer']:['Ingang','Gang','Grote Galerij','Grafkamer'];
  const routeImage=challenge?'assets/images/kamer4-uitdagend.png':'assets/images/kamer4-verkennend.png';
  const routeAlt=challenge?'Doorsnede van de piramide met vijf genummerde onderdelen.':'Doorsnede van de piramide met vier genummerde onderdelen.';
- p.innerHTML=`<div class="pyramid-route-layout"><img class="pyramid-route-image" src="${routeImage}" alt="${routeAlt}"><div class="pyramid-slots">${good.map((a,i)=>`<label><b>${i+1}</b><select data-a="${a}"><option value="">Kies onderdeel</option>${options.map(x=>`<option>${x}</option>`).join('')}</select></label>`).join('')}<button id="check">CONTROLEER</button></div></div>`;
+ p.innerHTML=`<div class="pyramid-route-layout"><img class="pyramid-route-image" src="${routeImage}" alt="${routeAlt}"><div class="pyramid-slots">${good.map((a,i)=>`<label><b>${i+1}</b><select data-a="${a}"><option value="">Kies onderdeel</option>${shuffle(good).map(x=>`<option>${x}</option>`).join('')}</select></label>`).join('')}<button id="check">CONTROLEER</button></div></div>`;
  setActiveHints(()=>{
   const hints=[{key:'pyramid-method',text:'Volg de route op de afbeelding van buiten naar steeds dieper in de piramide.'}];
   [...p.querySelectorAll('select')].forEach((select,index)=>{if(select.value!==select.dataset.a)hints.push({key:`pyramid-${select.dataset.a}`,text:`Bij stap ${index+1} hoort “${select.dataset.a}”.`})});
@@ -337,16 +336,14 @@ function enableDragSort(list){
 function readOrder(p){return [...p.querySelectorAll('.draggable .drag-label')].map(x=>x.textContent.trim()).join('|')}
 function showLearningRecap(){
  const run=++sceneRun;activeHint=null;updateHintButton();
- const cards=LEVELS.map(level=>{
-  const logs=state.hintLog.filter(entry=>entry.room===level.id),used=Number(state.hintUsage[level.id]||0);
-  const hintDetails=logs.length?`<ul class="recap-hints">${logs.map((entry,index)=>`<li><strong>Hint ${index+1}${entry.cost?` (−${entry.cost} punten)`:' (gratis)'}:</strong> ${entry.text}</li>`).join('')}</ul>`:used?`<p class="recap-no-hints">${used} ${used===1?'hint is':'hints zijn'} gebruikt; de tekst van deze eerdere hint is niet opgeslagen.</p>`:'<p class="recap-no-hints">Geen hints gebruikt.</p>';
-  return `<article class="recap-card"><h2><span aria-hidden="true">${state.solved.includes(level.id)?'✓':'○'}</span> Kamer ${level.id}: ${level.title}</h2><p><strong>Beheerst onderwerp:</strong> ${level.topic}.</p><p><strong>Kernfeit:</strong> ${level.fact}</p><div><strong>Gebruikte hints:</strong>${hintDetails}</div></article>`;
- }).join('');
- scene.innerHTML=`<div class="learning-recap-screen"><section class="learning-recap-panel" aria-labelledby="recapTitle"><header class="recap-header"><p class="tiny">JOUW LEEROPBRENGST</p><h1 id="recapTitle">Terugblik op de ontsnapping</h1><p>Je hebt tien onderwerpen uit het Oude Egypte onderzocht. Bekijk wat je hebt geleerd en welke hulp je hebt gebruikt.</p></header><div class="recap-list">${cards}</div><button id="startOutro" type="button">START DE OUTRO</button></section></div>`;
+ const usedHints=Object.values(state.hintUsage).reduce((total,count)=>total+Number(count||0),0);
+ const hintPoints=state.hintLog.reduce((total,entry)=>total+Number(entry.cost||0),0);
+ const topics=LEVELS.map(level=>`<li><span aria-hidden="true">✓</span> ${level.topic}</li>`).join('');
+ scene.innerHTML=`<div class="learning-recap-screen"><section class="learning-recap-panel" aria-labelledby="recapTitle"><header class="recap-header"><p class="tiny">GOED GEDAAN!</p><h1 id="recapTitle">Je bent ontsnapt</h1><p>Je hebt alle tien kamers voltooid en de belangrijkste onderdelen van het Oude Egypte ontdekt.</p></header><div class="recap-stats"><p><strong>10/10</strong><span>kamers voltooid</span></p><p><strong>${usedHints}</strong><span>${usedHints===1?'hint gebruikt':'hints gebruikt'}${hintPoints?` (−${hintPoints} punten)`:''}</span></p></div><div class="recap-summary"><h2>Dit heb je ontdekt</h2><ul>${topics}</ul><p class="recap-takeaway"><strong>Onthoud:</strong> De Nijl maakte leven en landbouw mogelijk en vormde het hart van het Oude Egypte.</p></div><button id="startOutro" type="button">START DE OUTRO</button></section></div>`;
  $('#startOutro').addEventListener('click',()=>{if(run===sceneRun)ending()});
 }
 async function ending(){
- const run=++sceneRun;AudioEngine.startMusic('intro');const images=['assets/images/image20.jpeg','assets/images/image21.jpeg','assets/images/image22.jpeg','assets/images/image23.jpeg'];
+ const run=++sceneRun;AudioEngine.startMusic('outro');const images=['assets/images/image20.jpeg','assets/images/image21.jpeg','assets/images/image22.jpeg','assets/images/image23.jpeg'];
  const elapsed=elapsedSeconds(),minutes=String(Math.floor(elapsed/60)).padStart(2,'0'),seconds=String(elapsed%60).padStart(2,'0');
  const rank=state.score>=1750?'Meesterarcheoloog':state.score>=1350?'Ontdekkingsreiziger':'Grafrover';
  scene.innerHTML=`<div class="outro-cinematic">${images.map((src,i)=>`<img class="outro-frame" data-i="${i}" src="${src}" alt="Eindscène ${i+1}">`).join('')}<button id="skipOutro" class="intro-skip" type="button">OUTRO OVERSLAAN</button></div>`;

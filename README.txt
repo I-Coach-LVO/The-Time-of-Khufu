@@ -1,4 +1,4 @@
-Escape the Pyramid – The Time of Khufu v1.9.5
+Escape the Pyramid – The Time of Khufu v1.9.6
 
 Starten:
 1. Pak het zipbestand volledig uit.
@@ -73,3 +73,10 @@ v1.9.5
 - Kamer 6 gebruikt in Uitdaging zeven stappen van het mummificatieproces.
 - De automatische overgang is uitgeschakeld, zodat de speler de historische uitleg rustig kan lezen en zelf verdergaat.
 - De intro- en outromuziek zijn verder verlaagd naar 30% van het ingestelde muziekvolume.
+
+v1.9.6
+- De intromuziek is verlaagd naar 20% van het ingestelde muziekvolume; de outro blijft op 30%.
+- De intromuziek komt bij het begin geleidelijk in zes seconden op volume.
+- Alle antwoordopties in kamer 4 beginnen met een hoofdletter.
+- Antwoordkeuzes worden in alle kamers gehusseld; bij keuzelijsten heeft iedere antwoordregel een eigen willekeurige volgorde.
+- De terugblik na kamer 10 is ingekort tot een scanbaar overzicht met onderwerpen, hintgebruik en één kernfeit; de outroknop is direct zichtbaar.

@@ -1,5 +1,5 @@
 const AudioEngine={
- fxEnabled:true,ctx:null,master:null,musicGain:null,musicTimer:null,fileMusic:null,introFadeFrame:null,step:0,currentRoom:null,musicVolume:.8,introMusicScale:.3,
+ fxEnabled:true,ctx:null,master:null,musicGain:null,musicTimer:null,fileMusic:null,introFadeFrame:null,step:0,currentRoom:null,musicVolume:.8,introMusicScale:.2,outroMusicScale:.3,
  init(){
   if(this.ctx)return;
   this.ctx=new (window.AudioContext||window.webkitAudioContext)();
@@ -10,7 +10,7 @@ const AudioEngine={
  },
  unlock(){
   this.init();if(this.ctx.state==='suspended')this.ctx.resume();
-  if(this.currentRoom==='intro'&&this.musicVolume>0){this.playIntro(false);return}
+  if(['intro','outro'].includes(this.currentRoom)&&this.musicVolume>0){this.playIntro(false);return}
   if(this.currentRoom!==null&&!this.musicTimer&&this.musicVolume>0)this.startMusic(this.currentRoom)
  },
  tone(freq=440,dur=.12,type='square',vol=.035,when=0,destination=null){
@@ -57,10 +57,11 @@ const AudioEngine={
   if(restartFade)this.fileMusic.volume=0;
   this.fileMusic.play().then(()=>{
    if(this.introFadeFrame)cancelAnimationFrame(this.introFadeFrame);
-   const started=performance.now(),from=this.fileMusic.volume,duration=4000;
+   const started=performance.now(),from=this.fileMusic.volume,duration=6000;
    const fade=now=>{
-    if(this.currentRoom!=='intro'||this.musicVolume<=0){this.introFadeFrame=null;return}
-    const progress=Math.min(1,(now-started)/duration),target=this.musicVolume*this.introMusicScale;
+    if(!['intro','outro'].includes(this.currentRoom)||this.musicVolume<=0){this.introFadeFrame=null;return}
+    const scale=this.currentRoom==='outro'?this.outroMusicScale:this.introMusicScale;
+    const progress=Math.min(1,(now-started)/duration),target=this.musicVolume*scale;
     this.fileMusic.volume=Math.min(1,from+(target-from)*progress);
     if(progress<1)this.introFadeFrame=requestAnimationFrame(fade);else this.introFadeFrame=null;
    };
@@ -73,11 +74,11 @@ const AudioEngine={
   this.currentRoom=room;
   if(this.musicTimer){clearInterval(this.musicTimer);this.musicTimer=null}
   this.step=0;
-  if(room==='intro'){
+  if(room==='intro'||room==='outro'){
    // Intro en outro gebruiken de door de gebruiker aangeleverde MIDI-compositie,
    // vooraf gerenderd naar WAV omdat browsers MIDI niet betrouwbaar rechtstreeks afspelen.
-   if(previous!=='intro')this.fileMusic.currentTime=0;
-   if(this.musicVolume>0)this.playIntro(previous!=='intro');
+   if(previous!==room)this.fileMusic.currentTime=0;
+   if(this.musicVolume>0)this.playIntro(previous!==room);
    return;
   }
   if(this.introFadeFrame){cancelAnimationFrame(this.introFadeFrame);this.introFadeFrame=null}
@@ -99,13 +100,13 @@ const AudioEngine={
   this.musicVolume=Math.max(0,Math.min(1,Number(value)||0));this.init();
   this.musicGain.gain.cancelScheduledValues(this.ctx.currentTime);
   this.musicGain.gain.setTargetAtTime(this.musicVolume,this.ctx.currentTime,.035);
-  if(this.fileMusic&&this.currentRoom!=='intro')this.fileMusic.volume=this.musicVolume*this.introMusicScale;
+  if(this.fileMusic&&!['intro','outro'].includes(this.currentRoom))this.fileMusic.volume=this.musicVolume*this.introMusicScale;
   if(this.musicVolume===0){
    if(this.musicTimer){clearInterval(this.musicTimer);this.musicTimer=null}
    if(this.fileMusic&&!this.fileMusic.paused)this.fileMusic.pause();
-  }else if(this.currentRoom==='intro'){
+  }else if(['intro','outro'].includes(this.currentRoom)){
    if(this.fileMusic.paused)this.playIntro(true);
-   else if(!this.introFadeFrame)this.fileMusic.volume=this.musicVolume*this.introMusicScale;
+   else if(!this.introFadeFrame){const scale=this.currentRoom==='outro'?this.outroMusicScale:this.introMusicScale;this.fileMusic.volume=this.musicVolume*scale}
   }else if(this.currentRoom!==null&&!this.musicTimer){
    this.startMusic(this.currentRoom);
   }
