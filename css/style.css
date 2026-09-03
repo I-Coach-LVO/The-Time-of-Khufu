@@ -62,7 +62,7 @@
 @media(max-width:900px){.inventory-wrap{grid-template-columns:1fr;grid-template-areas:"title" "inventory" "controls"}.controls{justify-content:flex-start;margin-top:8px}.music-volume{flex:1;grid-template-columns:auto minmax(100px,1fr) 42px}}
 
 /* Story-accurate gameplay refinements */
-.draggable{display:flex;align-items:center;gap:12px;user-select:none;touch-action:none;min-height:58px}
+.draggable{display:flex;align-items:center;gap:12px;user-select:none;touch-action:none;min-height:58px;will-change:transform}
 .draggable .drag-handle{font-size:1.35rem;cursor:grab}.draggable.dragging{opacity:.45;outline:4px dashed var(--gold)}
 .drag-label{flex:1;min-width:0}
 .move-controls{display:flex;align-items:center;gap:3px;margin-left:auto}

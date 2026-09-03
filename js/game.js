@@ -314,6 +314,18 @@ function finalPuzzle(p,L){
  renderSelection();
 }
 function sortableRow(label){const accessibleLabel=label.replace(/[.!?]+$/,'');return `<div class="draggable" draggable="true"><span class="drag-handle" aria-hidden="true">☰</span><span class="drag-label">${label}</span><span class="move-controls"><button class="move-button move-down" type="button" aria-label="${accessibleLabel} omlaag" title="Naar beneden">⇩</button><button class="move-button move-up" type="button" aria-label="${accessibleLabel} omhoog" title="Naar boven">⇧</button></span></div>`}
+function animateSortChange(list,change,excluded=null){
+ const rows=[...list.querySelectorAll('.draggable')],before=new Map(rows.map(row=>[row,row.getBoundingClientRect().top]));
+ change();
+ if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ rows.forEach(row=>{
+  if(row===excluded)return;
+  const delta=before.get(row)-row.getBoundingClientRect().top;
+  if(Math.abs(delta)<1)return;
+  row.getAnimations().forEach(animation=>animation.cancel());
+  row.animate([{transform:`translateY(${delta}px)`},{transform:'translateY(0)'}],{duration:360,easing:'cubic-bezier(.2,.8,.2,1)'});
+ });
+}
 function enableDragSort(list){
  let dragged=null;
  const updateButtons=()=>{
@@ -326,10 +338,10 @@ function enableDragSort(list){
  list.querySelectorAll('.draggable').forEach(row=>{
   row.addEventListener('dragstart',e=>{if(e.target.closest?.('.move-button')){e.preventDefault();return}dragged=row;row.classList.add('dragging')});
   row.addEventListener('dragend',()=>{row.classList.remove('dragging');dragged=null;updateButtons()});
-  row.addEventListener('dragover',e=>{e.preventDefault();if(!dragged||dragged===row)return;const box=row.getBoundingClientRect();const after=e.clientY>box.top+box.height/2;list.insertBefore(dragged,after?row.nextSibling:row)});
+  row.addEventListener('dragover',e=>{e.preventDefault();if(!dragged||dragged===row)return;const box=row.getBoundingClientRect(),after=e.clientY>box.top+box.height/2,target=after?row.nextSibling:row;if(target===dragged||(!target&&dragged===list.lastElementChild))return;animateSortChange(list,()=>list.insertBefore(dragged,target),dragged);updateButtons()});
   row.addEventListener('touchstart',e=>{if(!e.target.closest('.move-button'))row.classList.add('touch-ready')},{passive:true});
-  row.querySelector('.move-up').addEventListener('click',()=>{const previous=row.previousElementSibling;if(previous){list.insertBefore(row,previous);clearFeedback();updateButtons()}});
-  row.querySelector('.move-down').addEventListener('click',()=>{const next=row.nextElementSibling;if(next){list.insertBefore(next,row);clearFeedback();updateButtons()}});
+  row.querySelector('.move-up').addEventListener('click',()=>{const previous=row.previousElementSibling;if(previous){animateSortChange(list,()=>list.insertBefore(row,previous));clearFeedback();updateButtons()}});
+  row.querySelector('.move-down').addEventListener('click',()=>{const next=row.nextElementSibling;if(next){animateSortChange(list,()=>list.insertBefore(next,row));clearFeedback();updateButtons()}});
  });
  updateButtons();
 }

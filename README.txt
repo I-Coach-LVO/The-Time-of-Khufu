@@ -1,4 +1,4 @@
-Escape the Pyramid – The Time of Khufu v1.9.6
+Escape the Pyramid – The Time of Khufu v1.9.7
 
 Starten:
 1. Pak het zipbestand volledig uit.
@@ -80,3 +80,6 @@ v1.9.6
 - Alle antwoordopties in kamer 4 beginnen met een hoofdletter.
 - Antwoordkeuzes worden in alle kamers gehusseld; bij keuzelijsten heeft iedere antwoordregel een eigen willekeurige volgorde.
 - De terugblik na kamer 10 is ingekort tot een scanbaar overzicht met onderwerpen, hintgebruik en één kernfeit; de outroknop is direct zichtbaar.
+
+v1.9.7
+- De sorteerbalken in kamer 2 en 6 schuiven zichtbaar langs elkaar wanneer hun volgorde met de pijlen of door slepen wordt gewijzigd.
