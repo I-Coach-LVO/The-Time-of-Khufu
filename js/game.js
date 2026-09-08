@@ -212,9 +212,8 @@ function differences(p,L){
  let found=0;const foundIndices=new Set();
  const left='assets/images/Zoek-de-verschillen020.jpg';
  const right=state.mode==='challenge'?'assets/images/Zoek-de-verschillen022.jpg':'assets/images/Zoek-de-verschillen021.jpg';
- const streamer=`<svg class="challenge-streamer" viewBox="0 0 1024 1024" preserveAspectRatio="none" aria-hidden="true"><polyline points="699,389 720,389 731,373 748,373 760,363 785,363 796,351 827,351 833,366 846,373 860,373 871,361 881,350 895,350"/></svg>`;
- const picture=(src,side,showStreamer=false)=>`<div class="difference-image-wrap"><img src="${src}" alt="Schattenkamer afbeelding ${side}">${showStreamer?streamer:''}${spots.map((s,i)=>`<button class="difference-hotspot" data-i="${i}" style="left:${s.x}%;top:${s.y}%;width:${s.r*2}%" aria-label="Mogelijk verschil bij ${s.label}"><span aria-hidden="true">✦</span></button>`).join('')}</div>`;
- p.innerHTML=`<div class="difference-stage real-images">${picture(left,'links')}${picture(right,'rechts',state.mode==='challenge')}</div><p>Gevonden: <b id="found">0</b>/${total}</p>`;
+ const picture=(src,side)=>`<div class="difference-image-wrap"><img src="${src}" alt="Schattenkamer afbeelding ${side}">${spots.map((s,i)=>`<button class="difference-hotspot" data-i="${i}" style="left:${s.x}%;top:${s.y}%;width:${s.r*2}%" aria-label="Mogelijk verschil bij ${s.label}"><span aria-hidden="true">✦</span></button>`).join('')}</div>`;
+ p.innerHTML=`<div class="difference-stage real-images">${picture(left,'links')}${picture(right,'rechts')}</div><p>Gevonden: <b id="found">0</b>/${total}</p>`;
  setActiveHints(()=>{
   const remaining=spots.map((spot,index)=>({spot,index})).filter(({index})=>!foundIndices.has(String(index)));
   return [{key:'differences-method',text:'Vergelijk telkens hetzelfde kleine gebied links en rechts, in plaats van de hele afbeeldingen tegelijk.'},...remaining.flatMap(({spot,index})=>[

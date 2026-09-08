@@ -1,4 +1,4 @@
-Escape the Pyramid – The Time of Khufu v1.9.8
+Escape the Pyramid – The Time of Khufu v1.9.9
 
 Starten:
 1. Pak het zipbestand volledig uit.
@@ -87,3 +87,7 @@ v1.9.7
 v1.9.8
 - De onzichtbare klikgebieden in kamer 7 houden de normale muispijl en verklappen de verschillen niet meer.
 - In Uitdaging is de gele sliert naast de hanglamp iets contrastrijker gemaakt zonder het oorspronkelijke zoekbeeld te vervangen.
+
+v1.9.9
+- De rechterafbeelding van kamer 7 in Uitdaging is vervangen door het schone aangeleverde origineel.
+- De tijdelijke gele contrastoverlay is volledig verwijderd; de afbeelding met rode cirkels wordt uitsluitend als ontwikkelreferentie gebruikt en verschijnt niet in de game.
