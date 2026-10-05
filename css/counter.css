@@ -1,0 +1,9 @@
+.visit-counter{padding:10px 16px;background:#1a1022;border-top:2px solid var(--gold);text-align:center}
+.visit-counter[hidden]{display:none}
+.visit-counter h2{font-size:.8rem;margin:0 0 8px;color:var(--gold);letter-spacing:.08em}
+.visit-counter dl{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0}
+.visit-counter dt{font-size:.7rem;color:var(--sand)}
+.visit-counter dd{margin:4px 0 0;font-size:1.2rem;font-weight:bold;color:var(--cream)}
+.visit-counter p{font-size:.7rem;margin:6px 0 0}
+@media(max-width:420px){.visit-counter{padding:10px 8px}.visit-counter dt{font-size:.65rem}}
+

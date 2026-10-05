@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/visits.js": {
+      "maxDuration": 60
+    }
+  },
+  "git": {
+    "deploymentEnabled": {
+      "counter-data": false
+    }
+  }
+}
+
